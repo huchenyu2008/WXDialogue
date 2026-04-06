@@ -36,6 +36,9 @@ typedef struct WXDLloader
 
     // 使用的本地签名表
     WXDLarr* use_local_signs;
+
+    // 文件名称
+    const WXDLchar* where;
 }WXDLloader;
 
 // function============================================================================
@@ -98,6 +101,15 @@ WXDLbool _wxdl_is_little(const WXDLchar* _text)
 {
     unsigned char c = _text[0];
     if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z'))
+        return WXDL_TRUE;
+    else
+        return WXDL_FALSE;
+}
+
+WXDLbool _wxdl_is_scope(const WXDLchar* _text)
+{
+    unsigned char c = _text[0];
+    if (c == ' ' || c == '\n' || c == '\t')
         return WXDL_TRUE;
     else
         return WXDL_FALSE;
@@ -555,7 +567,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
             err = _wxdl_parse_name_and_id(_loader, *pc, &str);
             if (err)
             {
-                WXDL_LOG_WRITE(_loader, "Invalid path node name.");
+                WXDL_LOG_WRITE(_loader, _loader->where, "Invalid path node name.");
                 return err;
             }
             // 检查路径, 如果启用路径检查
@@ -567,7 +579,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                 // 难不成还是想在数字里找东西
                 if ((WXDLu64)find_dic == 1)
                 {
-                    WXDL_LOG_WRITE(_loader, "The node type in the path is not a table.");
+                    WXDL_LOG_WRITE(_loader, _loader->where, "The node type in the path is not a table.");
                     wxdl_free(str);
                     return 1;
                 }
@@ -594,7 +606,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                 // 判断标记
                 if (n == NULL)
                 {
-                    WXDL_LOG_WRITE(_loader, "Invalid path cannot locate the target node. Please check if the path is correct.");
+                    WXDL_LOG_WRITE(_loader, _loader->where, "Invalid path cannot locate the target node. Please check if the path is correct.");
                     wxdl_free(str);
                     return 1;
                 }
@@ -622,7 +634,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                         node = wxdl_hash_add_null(_hash, str);
                     else
                     {
-                        WXDL_LOG_WRITE(_loader, "Failed to fetch data correctly.");
+                        WXDL_LOG_WRITE(_loader, _loader->where, "Failed to fetch data correctly.");
                         wxdl_free(str);
                         return 1;
                     }
@@ -648,7 +660,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                         node = wxdl_hash_add_null(v->data.d, str);
                     else
                     {
-                        WXDL_LOG_WRITE(_loader, "Failed to fetch data correctly.");
+                        WXDL_LOG_WRITE(_loader, _loader->where, "Failed to fetch data correctly.");
                         wxdl_free(str);
                         return 1;
                     }
@@ -677,7 +689,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
     if (_check)
         if ((WXDLu64)find_dic != 1 && !(_hash == _check_hash && _ext_check_hashs == NULL))
         {
-            WXDL_LOG_WRITE(_loader, "In check mode, table get/set is not allowed. Try adding '!' to the path.");
+            WXDL_LOG_WRITE(_loader, _loader->where, "In check mode, table get/set is not allowed. Try adding '!' to the path.");
             return 1;
         }
     if (v == NULL) return 1;
@@ -757,7 +769,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         if (_check_node != NULL)
             if (!wxdl_is_type_convert(_check_node->v.type, WXDL_TYPE_FLOAT))
             {
-                WXDL_LOG_WRITE(_loader, "Unable to convert from type '%s' to type '%s'", "number", wxdl_get_type_str(_check_node->v.type));
+                WXDL_LOG_WRITE(_loader, _loader->where, "Unable to convert from type '%s' to type '%s'", "number", wxdl_get_type_str(_check_node->v.type));
                 return 1;
             }
 
@@ -767,7 +779,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         err = _wxdl_parse_number(_loader, &i, &f, &t);
         if (err)
         {
-            WXDL_LOG_WRITE(_loader, "Failed to parse number");
+            WXDL_LOG_WRITE(_loader, _loader->where, "Failed to parse number");
             return err;
         }
 
@@ -798,7 +810,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         if (_check_node != NULL)
             if (!wxdl_is_type_convert(_check_node->v.type, pv->type))
             {
-                WXDL_LOG_WRITE(_loader, "Unable to convert from type '%s' to type '%s'", wxdl_get_type_str(pv->type), wxdl_get_type_str(_check_node->v.type));
+                WXDL_LOG_WRITE(_loader, _loader->where, "Unable to convert from type '%s' to type '%s'", wxdl_get_type_str(pv->type), wxdl_get_type_str(_check_node->v.type));
                 return 1;
             }
 
@@ -809,7 +821,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         if (_check_node != NULL)
             if (!wxdl_is_type_convert(_check_node->v.type, WXDL_TYPE_STR))
             {
-                WXDL_LOG_WRITE(_loader, "Unable to convert from type '%s' to type '%s'", "string", wxdl_get_type_str(_check_node->v.type));
+                WXDL_LOG_WRITE(_loader, _loader->where, "Unable to convert from type '%s' to type '%s'", "string", wxdl_get_type_str(_check_node->v.type));
                 return 1;
             }
 
@@ -831,7 +843,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         if (_check_node != NULL)
             if (!wxdl_is_type_convert(_check_node->v.type, WXDL_TYPE_ARR))
             {
-                WXDL_LOG_WRITE(_loader, "Unable to convert from type '%s' to type '%s'", "array", wxdl_get_type_str(_check_node->v.type));
+                WXDL_LOG_WRITE(_loader, _loader->where, "Unable to convert from type '%s' to type '%s'", "array", wxdl_get_type_str(_check_node->v.type));
                 return 1;
             }
 
@@ -854,7 +866,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         if (_check_node != NULL)
             if (!wxdl_is_type_convert(_check_node->v.type, WXDL_TYPE_DIC))
             {
-                WXDL_LOG_WRITE(_loader, "Unable to convert from type '%s' to type '%s'", "table", wxdl_get_type_str(_check_node->v.type));
+                WXDL_LOG_WRITE(_loader, _loader->where, "Unable to convert from type '%s' to type '%s'", "table", wxdl_get_type_str(_check_node->v.type));
                 return 1;
             }
 
@@ -901,7 +913,7 @@ WXDLerror _wxdl_parse_block(WXDLloader* loader, WXDLtext* text, WXDLhash* dic, W
 
             if (is_spilt)
             {
-                WXDL_LOG_WRITE(loader, "Missing separator or incorrect ID format.");
+                WXDL_LOG_WRITE(loader, loader->where, "Missing separator or incorrect ID format.");
                 return 1;
             }
 
@@ -954,6 +966,10 @@ WXDLerror _wxdl_parse_block(WXDLloader* loader, WXDLtext* text, WXDLhash* dic, W
             _wxdl_loader_next(loader);
             break;
         }
+        else if (_wxdl_is_scope(loader->text + loader->ptr))
+        {
+            _wxdl_loader_next(loader);
+        }
         else
         {
             // 报错!!!
@@ -965,19 +981,22 @@ WXDLerror _wxdl_parse_block(WXDLloader* loader, WXDLtext* text, WXDLhash* dic, W
     // 判断是否是正常退出
     if (!is_break)
     {
-        WXDL_LOG_WRITE(loader, "Abnormal scope exit. Did you forget the scope terminator?");
+        WXDL_LOG_WRITE(loader, loader->where, "Abnormal scope exit. Did you forget the scope terminator?");
         return 1;
     }
     else
     {
-        // 生成节点
-        WXDLtext_node* tnode = (WXDLtext_node*)wxdl_malloc(sizeof(WXDLtext_node));
-        tnode->type = WXDL_TEXT_NODE_SIGN;
-        tnode->text = wxdl_new_str(sign_name);
-        tnode->data = dic;
-        tnode->use_local_tables = use_local_name;
+        if (text != NULL)
+        {
+            // 生成节点
+            WXDLtext_node* tnode = (WXDLtext_node*)wxdl_malloc(sizeof(WXDLtext_node));
+            tnode->type = WXDL_TEXT_NODE_SIGN;
+            tnode->text = wxdl_new_str(sign_name);
+            tnode->data = dic;
+            tnode->use_local_tables = use_local_name;
 
-        wxdl_text_add(text, tnode);
+            wxdl_text_add(text, tnode);
+        }
     }
     return 0;
 }
@@ -1043,7 +1062,7 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
             err = _wxdl_parse_name_and_id(loader, loader->text[loader->ptr], &sign);
             if (err)
             {
-                WXDL_LOG_WRITE(loader, "Invalid global signature table name");
+                WXDL_LOG_WRITE(loader, loader->where, "Invalid global signature table name");
                 wxdl_free_text(text);
                 return NULL;
             }
@@ -1071,7 +1090,7 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
                     // 找到对象必须为表
                     if (err || v->type != WXDL_TYPE_DIC)
                     {
-                        WXDL_LOG_WRITE(loader, "Invalid local signature table setting");
+                        WXDL_LOG_WRITE(loader, loader->where, "Invalid local signature table setting");
                         wxdl_free_text(text);
                         wxdl_free(sign);
                         wxdl_free_arr(use_local);
@@ -1120,7 +1139,7 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
             }
             else
             {
-                WXDL_LOG_WRITE(loader, "A block wrapped in '{}' is expected after the signature. Alternatively, did you mean to use '$$'?");
+                WXDL_LOG_WRITE(loader, loader->where, "A block wrapped in '{}' is expected after the signature. Alternatively, did you mean to use '$$'?");
                 wxdl_free(sign);
                 wxdl_free(use_local);
                 wxdl_free_text(text);
@@ -1164,7 +1183,7 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
 }
 
 
-WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, WXDLchar* _log_buff, WXDLu64 _log_max_size)
+WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, WXDLchar* _log_buff, WXDLu64 _log_max_size, const WXDLchar* _where)
 {
     if (_state == NULL || _text == NULL)
         return NULL;
@@ -1172,6 +1191,9 @@ WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, WXD
     WXDLloader loader;
 
     loader.state = _state;
+    loader.where = _where;
+    if (loader.where == NULL)
+        loader.where = "unknown";
 
     loader.text = _text;
     if (_text_size != 0)
@@ -1193,4 +1215,62 @@ WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, WXD
 
     wxdl_free_arr(loader.use_local_signs);
     return t;
+}
+
+WXDLhash* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, WXDLchar* _log_buff, WXDLu64 _log_max_size, const WXDLchar* _where)
+{
+    if (_state == NULL || _text == NULL)
+        return NULL;
+
+    WXDLloader loader;
+
+    loader.state = _state;
+    loader.where = _where;
+    if (loader.where == NULL)
+        loader.where = "unknown";
+
+    loader.text = _text;
+    if (_text_size != 0)
+        loader.text_size = _text_size;
+    else
+        loader.text_size = wxdl_str_len(_text);
+
+    loader.ptr = 0;
+    loader.line = 1;
+    loader.line_start = 0;
+
+    loader.log_buff = _log_buff;
+    loader.log_buff_size = _log_max_size;
+    loader.log_len = 0;
+
+    loader.use_local_signs = wxdl_new_arr(8);
+
+    WXDLhash* dic = NULL;
+    
+    for (; !_wxdl_loader_eof(&loader);)
+    {
+        if (_wxdl_is_scope(loader.text + loader.ptr))
+        {
+            _wxdl_loader_next(&loader);
+        }
+        else if (loader.text[loader.ptr] == '{')
+        {
+            _wxdl_loader_next(&loader);
+            dic = wxdl_new_hash(16);
+            WXDLerror err = _wxdl_parse_block(&loader, NULL, dic, NULL, WXDL_FALSE, NULL);
+            if (err)
+            {
+                wxdl_free_hash(dic);
+                return NULL;
+            }
+            return dic;
+        }
+        else
+        {
+             WXDL_LOG_WRITE(&loader, loader.where, "A block wrapped in '{}' is expected after the signature.");
+             return NULL;
+        }
+    }
+
+    return NULL;
 }

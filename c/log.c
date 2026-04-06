@@ -78,14 +78,14 @@ void _wxdl_limit_send(const WXDLchar* text, WXDLu64 line_st, int* off, int d, in
     *off = (int)i;
 }
 
-void wxdl_log_error(WXDLloader* loader, const WXDLchar* text)
+void wxdl_log_error(WXDLloader* loader, const WXDLchar* where, const WXDLchar* text)
 {
     if (loader->log_buff == NULL) return;
     int off = 0;
     int d = (int)_wxdl_get_enter_pos(loader->text, loader->line, loader->line_start);
     int x = (int)(loader->ptr - loader->line_start);
     _wxdl_limit_send(loader->text, loader->line_start, &off, d, x);
-    loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "WXDL Text Format Error, pos (%lld, %lld):\n", loader->line, loader->ptr - loader->line_start);
+    loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "WXDL Error file %s, pos (%lld, %lld):\n", where, loader->line, loader->ptr - loader->line_start);
     loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|    %.*s\n", d - off, loader->text + loader->line_start + (WXDLu64)off);
     loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|%*s~~~^\n", x - off, "");
     loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|error info : %s\n", text);

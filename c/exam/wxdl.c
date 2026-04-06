@@ -41,22 +41,23 @@ int main()
 	memset(log_buff, 0, sizeof(log_buff));
 
 	char text[] =
-		u8"$font121 1'asd'}";
+		u8"{a : 1}";
 	printf("%s\n", text);
-	WXDLtext* textdata = wxdl_parse(state, text, 0, log_buff, sizeof(log_buff) - 1);
-	printf("parse err : %d\n", textdata == NULL);
-	printf("%lld\n", wxdl_text_size(textdata));
+	WXDLhash* data = wxdl_parse_block(state, text, 0, log_buff, sizeof(log_buff) - 1, "current");
+	printf("parse err : %d\n", data == NULL);
+	//printf("%lld\n", wxdl_text_size(textdata));
 	// 输出所以节点
-	WXDLtext_node* tnode = wxdl_text_head(textdata);
+	//WXDLtext_node* tnode = wxdl_text_head(textdata);
 
 	printf("%s\n", log_buff);
 
-	while (tnode != NULL)
+	//while (tnode != NULL)
 	{
-		printf("type[%d] : %s\n", tnode->type, tnode->text);
-		if (tnode->type == 1)
+		//printf("type[%d] : %s\n", tnode->type, tnode->text);
+		//if (tnode->type == 1)
 		{
-			WXDLiterator* ite = wxdl_hash_ite(tnode->data);
+			//WXDLiterator* ite = wxdl_hash_ite(tnode->data);
+			WXDLiterator* ite = wxdl_hash_ite(data);
 			do
 			{
 				WXDLvalue* v = wxdl_iterator_get(ite);
@@ -65,7 +66,7 @@ int main()
 				printf("\tname[%s] type[%d]\n", wxdl_hash_ite_key(ite), v->type);
 			} while (wxdl_iterator_next(ite));
 		}
-		tnode = tnode->next;
+		//tnode = tnode->next;
 	}
 
 	wxdl_free_state(state);
