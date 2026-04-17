@@ -1,21 +1,19 @@
 
 #include "arr.h"
+#include "define.h"
 #include "std.h"
+#include "parse.h"
+#include "call.h"
+#include "string_builder.h"
 #include <stdlib.h>
 
 // 扩容因子
 #define _WXDL_ARR_EXT_SIZE_FATOR 1.5
 
-typedef struct WXDLarr
-{
-	WXDLvalue* data;
-	WXDLu64 size;
-	WXDLu64 max_size;
-}WXDLarr;
 
 // function================================================================================
 
-WXDLarr* wxdl_new_arr(WXDLu64 _size)
+WXDLarr* wxdl_new_arr(WXDLu64 _size, WXDLstring_builder* _builder)
 {
 	if (_size == 0)
 		_size = 20;
@@ -25,23 +23,48 @@ WXDLarr* wxdl_new_arr(WXDLu64 _size)
 	wxdl_set(a->data, 0, sizeof(WXDLvalue) * _size);
 	a->size = 0;
 	a->max_size = _size;
+	if (_builder == NULL) _builder = wxdl_get_global_builder();
+	a->builder = _builder;
+	a->refcount = 1;
+
+	return a;
+}
+
+WXDLarr* wxdl_arr_ref(WXDLarr* _arr)
+{
+	if (_arr == NULL)
+		return NULL;
+
+	_arr->refcount += 1;
+
+	return _arr;
+}
+
+WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLloader* _loader)
+{
+	if (_arr == NULL)
+		return NULL;
+
+	WXDLarr* a = wxdl_new_arr(_arr->max_size, _arr->builder);
+	a->size = _arr->size;
+	WXDLvalue* v = NULL;
+	for (WXDLu64 i = 0; i < _arr->size; i++)
+	{
+		v = &_arr->data[i];
+		if (_loader != NULL && v->type == WXDL_TYPE_CALL)
+		{
+			wxdl_set_loader_userdata(_loader, WXDL_V_CALL(*v));
+			wxdl_call(WXDL_V_CALL(*v), _loader, v);
+		}
+		wxdl_value_copy(&a->data[i], v);
+	}
 
 	return a;
 }
 
 WXDLarr* wxdl_arr_copy(WXDLarr* _arr)
 {
-	if (_arr == NULL)
-		return NULL;
-
-	WXDLarr* a = wxdl_new_arr(_arr->max_size);
-	a->size = _arr->size;
-	for (WXDLu64 i = 0; i < _arr->size; i++)
-	{
-		wxdl_value_copy(&a->data[i], &_arr->data[i]);
-	}
-
-	return a;
+	return wxdl_arr_copy_running(_arr, NULL);
 }
 
 void wxdl_arr_clear(WXDLarr* _arr)
@@ -69,8 +92,11 @@ void wxdl_free_arr(WXDLarr* _arr)
 	if (_arr == NULL)
 		return;
 
-	wxdl_arr_clear(_arr);
-	wxdl_free(_arr);
+	if (_arr->refcount == 0)
+	{
+		wxdl_arr_clear(_arr);
+		wxdl_free(_arr);
+	}
 }
 
 WXDLvalue* wxdl_arr_at(WXDLarr* _arr, WXDLu64 _index)
@@ -98,7 +124,7 @@ void _wxdl_arr_ext(WXDLarr* _arr, WXDLu64 _new_size)
 	_arr->data = wxdl_malloc(sizeof(WXDLvalue) * _arr->max_size);
 	wxdl_copy(_arr->data, la, sizeof(WXDLvalue) * _arr->size);
 
-	wxdl_free(la);
+	wxdl_free_value(la);
 }
 
 // 检查数组大小, 判断是否扩容, 如果要则扩容
@@ -109,7 +135,7 @@ void _wxdl_arr_check_size(WXDLarr* _arr, WXDLu64 _add_size)
 	{
 		// 计算扩大容量
 		WXDLu64 size = (WXDLu64)(_arr->max_size * _WXDL_ARR_EXT_SIZE_FATOR);
-		while (size < ns) 
+		while (size < ns)
 			size = (WXDLu64)(size * _WXDL_ARR_EXT_SIZE_FATOR);
 
 		_wxdl_arr_ext(_arr, size);
@@ -126,9 +152,8 @@ WXDLvalue* wxdl_arr_insert_null(WXDLarr* _arr, WXDLu64 _index)
 	{
 		_arr->data[i + 1] = _arr->data[i];
 	}
-	_arr->data[_index].data.i = 0;
-	_arr->data[_index].type = WXDL_TYPE_NULL;
-	_arr->data[_index].flag = 0;
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_NULL(*v);
 	_arr->size += 1;
 	return &_arr->data[_index];
 }
@@ -136,64 +161,88 @@ WXDLvalue* wxdl_arr_insert_null(WXDLarr* _arr, WXDLu64 _index)
 WXDLvalue* wxdl_arr_insert_bool(WXDLarr* _arr, WXDLbool _v, WXDLu64 _index)
 {
 	wxdl_arr_insert_null(_arr, _index);
-	_arr->data[_index].data.b = _v;
-	_arr->data[_index].type = WXDL_TYPE_BOOL;
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_BOOL(*v, _v);
 	return &_arr->data[_index];
 }
 
 WXDLvalue* wxdl_arr_insert_int(WXDLarr* _arr, WXDLint _v, WXDLu64 _index)
 {
 	wxdl_arr_insert_null(_arr, _index);
-	_arr->data[_index].data.i = _v;
-	_arr->data[_index].type = WXDL_TYPE_INT;
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_INT(*v, _v);
 	return &_arr->data[_index];
 }
 
 WXDLvalue* wxdl_arr_insert_u64(WXDLarr* _arr, WXDLu64 _v, WXDLu64 _index)
 {
 	wxdl_arr_insert_null(_arr, _index);
-	_arr->data[_index].data.u = _v;
-	_arr->data[_index].type = WXDL_TYPE_INT;
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_UINT(*v, _v);
 	return &_arr->data[_index];
 }
 
 WXDLvalue* wxdl_arr_insert_float(WXDLarr* _arr, WXDLfloat _v, WXDLu64 _index)
 {
 	wxdl_arr_insert_null(_arr, _index);
-	_arr->data[_index].data.f = _v;
-	_arr->data[_index].type = WXDL_TYPE_FLOAT;
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_FLOAT(*v, _v);
 	return &_arr->data[_index];
 }
 
 WXDLvalue* wxdl_arr_insert_str(WXDLarr* _arr, const WXDLchar* _v, WXDLu64 _index)
 {
 	wxdl_arr_insert_null(_arr, _index);
-	_arr->data[_index].data.s = wxdl_new_str(_v);
-	_arr->data[_index].type = WXDL_TYPE_STR;
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_STR(*v, wxdl_build_string(_arr->builder, _v));
 	return &_arr->data[_index];
 }
 
-WXDLvalue* wxdl_arr_insert_str_ref(WXDLarr* _arr, WXDLchar* _v, WXDLu64 _index)
+WXDLvalue* wxdl_arr_insert_str_ref(WXDLarr* _arr, WXDLstring* _v, WXDLu64 _index)
 {
 	wxdl_arr_insert_null(_arr, _index);
-	_arr->data[_index].data.s = _v;
-	_arr->data[_index].type = WXDL_TYPE_STR;
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_STR(*v, _v);
 	return &_arr->data[_index];
 }
 
 WXDLvalue* wxdl_arr_insert_hash(WXDLarr* _arr, WXDLhash* _v, WXDLu64 _index)
 {
 	wxdl_arr_insert_null(_arr, _index);
-	_arr->data[_index].data.d = _v;
-	_arr->data[_index].type = WXDL_TYPE_DIC;
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_DIC(*v, wxdl_hash_ref(_v));
 	return &_arr->data[_index];
 }
 
 WXDLvalue* wxdl_arr_insert_arr(WXDLarr* _arr,  WXDLarr* _v, WXDLu64 _index)
 {
 	wxdl_arr_insert_null(_arr, _index);
-	_arr->data[_index].data.a = _v;
-	_arr->data[_index].type = WXDL_TYPE_ARR;
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_ARR(*v, wxdl_arr_ref(_v));
+	return &_arr->data[_index];
+}
+
+WXDLvalue* wxdl_arr_insert_call(WXDLarr* _arr,  WXDLcall* _v, WXDLu64 _index)
+{
+	wxdl_arr_insert_null(_arr, _index);
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_CALL(*v, _v);
+	return &_arr->data[_index];
+}
+
+WXDLvalue* wxdl_arr_insert_call_ref(WXDLarr* _arr,  WXDLcall* _v, WXDLu64 _index)
+{
+	wxdl_arr_insert_null(_arr, _index);
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_CALL_REF(*v, _v);
+	return &_arr->data[_index];
+}
+
+WXDLvalue* wxdl_arr_insert_ptr(WXDLarr* _arr,  WXDLptr _v, WXDLu64 _index)
+{
+	wxdl_arr_insert_null(_arr, _index);
+	WXDLvalue* v = &_arr->data[_index];
+	WXDL_V_SET_PTR(*v, _v);
 	return &_arr->data[_index];
 }
 
@@ -209,9 +258,8 @@ WXDLvalue* wxdl_arr_add_null(WXDLarr* _arr)
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.i = 0;
-	v->type = WXDL_TYPE_NULL;
-	v->flag = 0;
+
+	WXDL_V_SET_NULL(*v);
 	return v;
 }
 
@@ -220,9 +268,7 @@ WXDLvalue* wxdl_arr_add_bool(WXDLarr* _arr, WXDLbool _v)
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.b = _v;
-	v->type = WXDL_TYPE_BOOL;
-	v->flag = 0;
+	WXDL_V_SET_BOOL(*v, _v);
 	return v;
 }
 
@@ -231,9 +277,7 @@ WXDLvalue* wxdl_arr_add_int(WXDLarr* _arr, WXDLint _v)
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.i = _v;
-	v->type = WXDL_TYPE_INT;
-	v->flag = 0;
+	WXDL_V_SET_INT(*v, _v);
 	return v;
 }
 
@@ -242,9 +286,7 @@ WXDLvalue* wxdl_arr_add_u64(WXDLarr* _arr, WXDLu64 _v)
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.u = _v;
-	v->type = WXDL_TYPE_INT;
-	v->flag = 0;
+	WXDL_V_SET_UINT(*v, _v);
 	return v;
 }
 
@@ -253,9 +295,7 @@ WXDLvalue* wxdl_arr_add_float(WXDLarr* _arr, WXDLfloat _v)
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.f = _v;
-	v->type = WXDL_TYPE_FLOAT;
-	v->flag = 0;
+	WXDL_V_SET_FLOAT(*v, _v);
 	return v;
 }
 
@@ -264,20 +304,16 @@ WXDLvalue* wxdl_arr_add_str(WXDLarr* _arr, const WXDLchar* _v)
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.s = wxdl_new_str(_v);
-	v->type = WXDL_TYPE_STR;
-	v->flag = 0;
+	WXDL_V_SET_STR(*v, wxdl_build_string(_arr->builder, _v));
 	return v;
 }
 
-WXDLvalue* wxdl_arr_add_str_ref(WXDLarr* _arr, WXDLchar* _v)
+WXDLvalue* wxdl_arr_add_str_ref(WXDLarr* _arr, WXDLstring* _v)
 {
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.s = _v;
-	v->type = WXDL_TYPE_STR;
-	v->flag = 1;
+	WXDL_V_SET_STR(*v, _v);
 	return v;
 }
 
@@ -286,20 +322,7 @@ WXDLvalue* wxdl_arr_add_hash(WXDLarr* _arr, WXDLhash* _v)
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.d = _v;
-	v->type = WXDL_TYPE_DIC;
-	v->flag = 0;
-	return v;
-}
-
-WXDLvalue* wxdl_arr_add_hash_ref(WXDLarr* _arr, WXDLhash* _v)
-{
-	_wxdl_arr_check_size(_arr, 1);
-
-	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.d = _v;
-	v->type = WXDL_TYPE_DIC;
-	v->flag = 1;
+	WXDL_V_SET_DIC(*v, wxdl_hash_ref(_v));
 	return v;
 }
 
@@ -308,20 +331,34 @@ WXDLvalue* wxdl_arr_add_arr(WXDLarr* _arr, WXDLarr* _v)
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.a = _v;
-	v->type = WXDL_TYPE_ARR;
-	v->flag = 0;
+	WXDL_V_SET_ARR(*v, wxdl_arr_ref(_v));
 	return v;
 }
 
-WXDLvalue* wxdl_arr_add_arr_ref(WXDLarr* _arr, WXDLarr* _v)
+WXDLvalue* wxdl_arr_add_call(WXDLarr* _arr, WXDLcall* _v)
 {
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	v->data.a = _v;
-	v->type = WXDL_TYPE_ARR;
-	v->flag = 1;
+	WXDL_V_SET_CALL(*v, _v);
+	return v;
+}
+
+WXDLvalue* wxdl_arr_add_call_ref(WXDLarr* _arr, WXDLcall* _v)
+{
+	_wxdl_arr_check_size(_arr, 1);
+
+	WXDLvalue* v = &_arr->data[_arr->size++];
+	WXDL_V_SET_CALL_REF(*v, _v);
+	return v;
+}
+
+WXDLvalue* wxdl_arr_add_ptr(WXDLarr* _arr, WXDLptr _v)
+{
+	_wxdl_arr_check_size(_arr, 1);
+
+	WXDLvalue* v = &_arr->data[_arr->size++];
+	WXDL_V_SET_PTR(*v, _v);
 	return v;
 }
 
@@ -348,7 +385,7 @@ WXDLvalue wxdl_arr_remove(WXDLarr* _arr, WXDLu64 _index)
 	{
 		_arr[i] = _arr[i + 1];
 	}
-	
+
 	return lv;
 }
 
@@ -358,7 +395,7 @@ void wxdl_arr_delete(WXDLarr* _arr, WXDLu64 _index)
 		return;
 
 	wxdl_free_value(&(_arr->data[_index]));
-	
+
 	for (WXDLu64 i = _index; i < (_arr->size - 1); i++)
 	{
 		_arr[i] = _arr[i + 1];
@@ -400,7 +437,7 @@ WXDLvalue* _wxdl_arr_ite_get(WXDLiterator* _ite)
 	{
 		return _ite->data;
 	}
-	
+
 }
 
 WXDLiterator* wxdl_arr_ite(WXDLarr* _arr)
@@ -414,6 +451,7 @@ WXDLiterator* wxdl_arr_ite(WXDLarr* _arr)
 
 	ite->data = _arr;
 
+	ite->builder = _arr->builder;
 	ite->user1 = 0;
 	ite->_v0 = wxdl_arr_at(_arr, 0);
 

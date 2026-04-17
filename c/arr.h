@@ -5,8 +5,24 @@
 #include "./iterator.h"
 
 
+typedef struct WXDLarr
+{
+	WXDLvalue* data;
+	WXDLu64 size;
+	WXDLu64 max_size;
+	WXDLstring_builder* builder;
+	WXDLu64 refcount;
+}WXDLarr;
+
 // 创建数组
-WXDIALOGUE_API WXDLarr* wxdl_new_arr(WXDLu64 _size);
+WXDIALOGUE_API WXDLarr* wxdl_new_arr(WXDLu64 _size, WXDLstring_builder* _builder);
+
+// 引用数组
+WXDIALOGUE_API WXDLarr* wxdl_arr_ref(WXDLarr* _arr);
+
+// 拷贝数组
+// _loader为NULL时, 不会运行call元素
+WXDIALOGUE_API WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLloader* _loader);
 
 // 拷贝数组
 WXDIALOGUE_API WXDLarr* wxdl_arr_copy(WXDLarr* _arr);
@@ -40,11 +56,17 @@ WXDIALOGUE_API WXDLvalue* wxdl_arr_insert_float(WXDLarr* _arr, WXDLfloat _v, WXD
 
 WXDIALOGUE_API WXDLvalue* wxdl_arr_insert_str(WXDLarr* _arr, const WXDLchar* _v, WXDLu64 _index);
 
-WXDIALOGUE_API WXDLvalue* wxdl_arr_insert_str_ref(WXDLarr* _arr, WXDLchar* _v, WXDLu64 _index);
+WXDIALOGUE_API WXDLvalue* wxdl_arr_insert_str_ref(WXDLarr* _arr, WXDLstring* _v, WXDLu64 _index);
 
 WXDIALOGUE_API WXDLvalue* wxdl_arr_insert_hash(WXDLarr* _arr, WXDLhash* _v, WXDLu64 _index);
 
 WXDIALOGUE_API WXDLvalue* wxdl_arr_insert_arr(WXDLarr* _arr, WXDLarr* _v, WXDLu64 _index);
+
+WXDIALOGUE_API WXDLvalue* wxdl_arr_insert_call(WXDLarr* _arr, WXDLcall* _v, WXDLu64 _index);
+
+WXDIALOGUE_API WXDLvalue* wxdl_arr_insert_call_ref(WXDLarr* _arr, WXDLcall* _v, WXDLu64 _index);
+
+WXDIALOGUE_API WXDLvalue* wxdl_arr_insert_ptr(WXDLarr* _arr, WXDLptr _v, WXDLu64 _index);
 
 WXDIALOGUE_API WXDLvalue* wxdl_arr_insert_v(WXDLarr* _arr, WXDLvalue* _v, WXDLu64 _index);
 
@@ -60,15 +82,17 @@ WXDIALOGUE_API WXDLvalue* wxdl_arr_add_float(WXDLarr* _arr, WXDLfloat _v);
 
 WXDIALOGUE_API WXDLvalue* wxdl_arr_add_str(WXDLarr* _arr, const WXDLchar* _v);
 
-WXDIALOGUE_API WXDLvalue* wxdl_arr_add_str_ref(WXDLarr* _arr, WXDLchar* _v);
+WXDIALOGUE_API WXDLvalue* wxdl_arr_add_str_ref(WXDLarr* _arr, WXDLstring* _v);
 
 WXDIALOGUE_API WXDLvalue* wxdl_arr_add_hash(WXDLarr* _arr, WXDLhash* _v);
 
-WXDIALOGUE_API WXDLvalue* wxdl_arr_add_hash_ref(WXDLarr* _arr, WXDLhash* _v);
-
 WXDIALOGUE_API WXDLvalue* wxdl_arr_add_arr(WXDLarr* _arr, WXDLarr* _v);
 
-WXDIALOGUE_API WXDLvalue* wxdl_arr_add_arr_ref(WXDLarr* _arr, WXDLarr* _v);
+WXDIALOGUE_API WXDLvalue* wxdl_arr_add_call(WXDLarr* _arr, WXDLcall* _v);
+
+WXDIALOGUE_API WXDLvalue* wxdl_arr_add_call_ref(WXDLarr* _arr, WXDLcall* _v);
+
+WXDIALOGUE_API WXDLvalue* wxdl_arr_add_ptr(WXDLarr* _arr, WXDLptr _v);
 
 WXDIALOGUE_API WXDLvalue* wxdl_arr_add_value(WXDLarr* _arr, WXDLvalue* _v);
 

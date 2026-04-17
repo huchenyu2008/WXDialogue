@@ -2,6 +2,8 @@
 #include "std.h"
 #include "arr.h"
 #include "hash.h"
+#include "call.h"
+#include "string_builder.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -10,7 +12,7 @@ WXDLptr wxdl_malloc(WXDLint _malloc_size)
 	return (WXDLptr)malloc(_malloc_size);
 }
 
-void wxdl_value_copy(WXDLvalue* _v1, WXDLvalue* _v2)
+void wxdl_value_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLloader* _loader)
 {
 	if (_v1 == NULL || _v2 == NULL)
 		return;
@@ -20,11 +22,28 @@ void wxdl_value_copy(WXDLvalue* _v1, WXDLvalue* _v2)
 	_v1->type = _v2->type;
 	switch (_v2->type)
 	{
+	case WXDL_TYPE_STR:
+		WXDL_V_SET_STR(*_v1, wxdl_string_ref(_v2->data.s));
+		break;
 	case WXDL_TYPE_DIC:
-		_v1->data.d = wxdl_hash_copy(_v2->data.d);
+		WXDL_V_SET_DIC(*_v1, wxdl_hash_copy(_v2->data.d));
 		break;
 	case WXDL_TYPE_ARR:
-		_v1->data.a = wxdl_arr_copy(_v2->data.a);
+		WXDL_V_SET_ARR(*_v1, wxdl_arr_copy(_v2->data.a));
+		break;
+	case WXDL_TYPE_CALL:
+		if (_loader == NULL)
+			if (_v2->flag == 0)
+			{
+				WXDL_V_SET_CALL(*_v1, wxdl_call_copy(_v2->data.c));
+			}
+			else
+			{
+
+				WXDL_V_SET_CALL_REF(*_v1, _v2->data.c);
+			}
+		else
+			wxdl_call(_v2->data.c, _loader, _v1);
 		break;
 	default:
 		_v1->data.p = _v2->data.p;
@@ -32,6 +51,11 @@ void wxdl_value_copy(WXDLvalue* _v1, WXDLvalue* _v2)
 	}
 
 	_v1->flag = _v2->flag;
+}
+
+void wxdl_value_copy(WXDLvalue* _v1, WXDLvalue* _v2)
+{
+	wxdl_value_copy_running(_v1, _v2, NULL);
 }
 
 void wxdl_free(WXDLptr _p)
@@ -51,20 +75,29 @@ void wxdl_free_value(WXDLvalue* _pv)
 	switch (_pv->type)
 	{
 	case WXDL_TYPE_DIC:
-		if (_pv->flag == 0)
-			wxdl_free_hash(_pv->data.d);
+		wxdl_free_hash(_pv->data.d);
 		break;
 	case WXDL_TYPE_ARR:
-		if (_pv->flag == 0)
-			wxdl_free_arr(_pv->data.a);
+		wxdl_free_arr(_pv->data.a);
 		break;
 	case WXDL_TYPE_STR:
+		wxdl_free_string(_pv->data.s);
+		break;
+	case WXDL_TYPE_CALL:
 		if (_pv->flag == 0)
-			wxdl_free(_pv->data.s);
+		{
+			wxdl_free_call(_pv->data.c, WXDL_TRUE);
+		}
 		break;
 	}
 
 	_pv->data.p = NULL;
+}
+
+void wxdl_free_value_arr(WXDLvalue* _pv, WXDLu64 count)
+{
+	for (WXDLu64 i = 0; i < count; i++)
+		wxdl_free_value(&_pv[i]);
 }
 
 void wxdl_set(WXDLptr _buff, WXDLint32 _v, WXDLu64 _size)
@@ -103,7 +136,7 @@ WXDLu64 wxdl_str_hashcode(const WXDLchar* _str)
 	WXDLu64 ptr = 0;
 	char chr;
 	const WXDLu64 f = 131;
-	while ((chr = _str[ptr++]))
+	while ((chr = _str[ptr++]) && ptr < 64)
 	{
 		hash = hash * f + chr;
 	}

@@ -2,5 +2,6 @@
 #define _LGDIALOGUE_WXDL_H_
 
 #include "./parse.h"
+#include "./call.h"
 
 #endif // _LGDIALOGUE_WXDL_H_

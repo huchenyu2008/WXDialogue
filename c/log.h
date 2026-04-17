@@ -10,6 +10,12 @@ typedef struct WXDLlog
 }WXDLlog;
 
 #ifdef _MSC_VER
+#define WXDL_ERR_LOG(loader, text, ...) \
+    {\
+        static char _wxdl_log_info_buff[128];\
+        sprintf_s(_wxdl_log_info_buff, 1024, text, __VA_ARGS__);\
+        wxdl_log_call_error(loader, _wxdl_log_info_buff);\
+    }
 #define WXDL_LOG_WRITE(loader, where, text, ...) \
     {\
         static char _wxdl_log_info_buff[128];\
@@ -17,6 +23,13 @@ typedef struct WXDLlog
         wxdl_log_error(loader, where, _wxdl_log_info_buff);\
     }
 #else
+#define WXDL_ERR_LOG(loader, text, ...) \
+    {\
+        static char _wxdl_log_info_buff[128];\
+        sprintf_s(_wxdl_log_info_buff, 1024, text, ##__VA_ARGS__);\
+        wxdl_log_call_error(loader, _wxdl_log_info_buff);\
+    }
+
 #define WXDL_LOG_WRITE(loader, where, text, ...) \
     {\
         static char _wxdl_log_info_buff[128];\
@@ -25,12 +38,13 @@ typedef struct WXDLlog
     }
 #endif
 // 生成错误信息
-// code 数据文本
-// line 错误行数
-// line_st 当前行开始位置
-// error_pos 错误的位置
-// text 信息
 WXDIALOGUE_API void wxdl_log_error(WXDLloader* loader, const WXDLchar* where, const WXDLchar* text);
+
+// Call时用的, 生成错误信息
+// 注意！loader->userdata必须为WXDLCall类型，不然就为空
+// 函数wxdl_hash_copy_running和wxdl_arr_copy_running的实现
+// 就是利用这个让调用的错误输出用错误的文件位置
+WXDIALOGUE_API void wxdl_log_call_error(WXDLloader* loader, const WXDLchar* text);
 
 WXDIALOGUE_API const char* wxdl_get_type_str(int flag);
 

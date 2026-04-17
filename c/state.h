@@ -6,6 +6,7 @@
 // 状态机
 typedef struct WXDLstate WXDLstate;
 
+
 // 每个文本节点
 typedef struct WXDLtext_node
 {
@@ -35,7 +36,7 @@ typedef struct WXDLtext WXDLtext;
 #define WXDL_NEW_TEXT_NODE(type, text, data) (WXDLtext_node){.type = type, .text = text, .data = data, .next = NULL};
 
 // 创建状态机
-WXDIALOGUE_API WXDLstate* wxdl_new_state();
+WXDIALOGUE_API WXDLstate* wxdl_new_state(WXDLstring_builder* builder);
 
 // 释放状态机
 // 注意它会把所以你提供的字典(签名表和全局数据表)释放, 避免访问无效内存
@@ -70,6 +71,15 @@ WXDIALOGUE_API WXDLhash* wxdl_state_get_local_sign(WXDLstate* _state, const WXDL
 // 获取全局变量表
 WXDIALOGUE_API WXDLhash* wxdl_state_get_global(WXDLstate* _state);
 
+WXDIALOGUE_API WXDLhash_node* wxdl_state_add_func(WXDLstate* _state, const WXDLchar* _name, WXDLfunction func);
+
+WXDIALOGUE_API WXDLfunction wxdl_state_get_func(WXDLstate* _state, const WXDLchar* _name);
+
+// 获取全局函数表
+WXDIALOGUE_API WXDLhash* wxdl_state_get_func_table(WXDLstate* _state);
+
+// 获取文本构建器
+WXDIALOGUE_API WXDLstring_builder* wxdl_state_get_string_builder(WXDLstate* _state);
 
 // WXDLtext===============================================================
 

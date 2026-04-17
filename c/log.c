@@ -1,9 +1,9 @@
-#ifndef _WXDIALOGUE_LOG_C_
-#define _WXDIALOGUE_LOG_C_
+
 #include "./log.h"
 #include "define.h"
 #include "arr.h"
 #include <stdio.h>
+
 
 typedef struct WXDLloader
 {
@@ -35,6 +35,20 @@ typedef struct WXDLloader
 
     // 使用的本地签名表
     WXDLarr* use_local_signs;
+
+    // 文件名称
+    const WXDLchar* where;
+
+    // 是否直接运行
+    WXDLbool is_running_call;
+
+    // 当前的call层数
+    WXDLu64 call_layer_count;
+
+    // 用户数据
+    WXDLptr userdata;
+
+    WXDLstring_builder* builder;
 }WXDLloader;
 
 WXDLint _wxdl_get_enter_pos(const WXDLchar* code, WXDLint line, WXDLint line_st)
@@ -68,7 +82,7 @@ void _wxdl_limit_send(const WXDLchar* text, WXDLu64 line_st, int* off, int d, in
                 *off = x - max_w / 2;
         }
     }
-    
+
     // 放在utf8乱码
     WXDLu64 i = 0;
     for (;i < d; i += _wxdl_get_utf8_len(text + line_st + i))
@@ -91,6 +105,27 @@ void wxdl_log_error(WXDLloader* loader, const WXDLchar* where, const WXDLchar* t
     loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|error info : %s\n", text);
     loader->log_buff[loader->log_len] = '\0';
     return;
+}
+
+void wxdl_log_call_error(WXDLloader* loader, const WXDLchar* text)
+{
+    if (loader->log_buff == NULL) return;
+
+
+    if (loader->is_running_call)
+    {
+        wxdl_log_error(loader, loader->where, text);
+        return;
+    }
+
+    WXDLcall* c = (WXDLcall*)wxdl_loader_userdata(loader);
+    if (c != NULL && c->where != NULL)
+        loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "WXDL Call Error file %s, pos (%d, %d):\n", c->where->str, c->line, c->xpos);
+    else
+        loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "WXDL Call Error file unkown, pos (%d, %d):\n", c->line, c->xpos);
+    loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|    Detailed error location is not exposed in call mode.\n");
+    loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+    loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|error info : %s\n", text);
 }
 
 const char* wxdl_get_type_str(int flag)
@@ -117,5 +152,3 @@ const char* wxdl_get_type_str(int flag)
         return "unknown";
     }
 }
-
-#endif

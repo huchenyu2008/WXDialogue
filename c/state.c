@@ -3,12 +3,13 @@
 #include "hash.h"
 #include "arr.h"
 #include "std.h"
+#include "string_builder.h"
 
 typedef struct WXDLstate
 {
 	// 全局数据
 	// 用于代替数据别名
-	// 比如 : color.black 数值为 0x000000 
+	// 比如 : color.black 数值为 0x000000
 	WXDLhash* global;
 
 	// 签名表(用于核对签名是否有误)
@@ -18,6 +19,9 @@ typedef struct WXDLstate
 	// 使用要声明(用于支持一些非全局标签的类型检查使用)
 	WXDLhash* local_signs;
 
+	// 全部函数
+	WXDLhash* funcs;
+
 	// 文本的节点
 	// 注意, 每次解析都会将其释放掉
 	// 如果需要长期使用, 请调用函数获得托管权
@@ -25,6 +29,7 @@ typedef struct WXDLstate
 
 	WXDLtext_node* end_text;
 
+	WXDLstring_builder* builder;
 }WXDLstate;
 
 typedef struct WXDLtext
@@ -37,12 +42,15 @@ typedef struct WXDLtext
 }WXDLtext;
 
 // function===========================================================
-WXDLstate* wxdl_new_state()
+WXDLstate* wxdl_new_state(WXDLstring_builder* _builder)
 {
 	WXDLstate* s = wxdl_malloc(sizeof(WXDLstate));
-	s->global = wxdl_new_hash(32);
-	s->signs = wxdl_new_hash(32);
-	s->local_signs = wxdl_new_hash(32);
+	if (_builder == NULL) _builder = wxdl_get_global_builder();
+	s->builder = _builder;
+	s->global = wxdl_new_hash(32, _builder);
+	s->signs = wxdl_new_hash(32, _builder);
+	s->local_signs = wxdl_new_hash(32, _builder);
+	s->funcs = wxdl_new_hash(32, _builder);
 
 	// 添加全局变量
 	wxdl_hash_add_null(s->global, "null");
@@ -62,6 +70,7 @@ void wxdl_free_state(WXDLstate* _state)
 	wxdl_free_hash(_state->global);
 	wxdl_free_hash(_state->signs);
 	wxdl_free_hash(_state->local_signs);
+	wxdl_free_hash(_state->funcs);
 
 	wxdl_free(_state);
 }
@@ -80,7 +89,7 @@ WXDLtext_node* wxdl_state_add_node(WXDLstate* _state, WXDLtext_node* _node)
 		return NULL;
 
 
-	if (_state->texts == NULL) 
+	if (_state->texts == NULL)
 	{
 		_state->texts = _node;
 		_state->end_text = _node;
@@ -172,8 +181,6 @@ WXDLhash* wxdl_state_add_local_sign(WXDLstate* _state, const WXDLchar* _sign, WX
 	return _table;
 }
 
-
-
 WXDLhash* wxdl_state_get_sign(WXDLstate* _state, const WXDLchar* _sign)
 {
 	if (_state == NULL || _sign == NULL)
@@ -202,6 +209,41 @@ WXDLhash* wxdl_state_get_global(WXDLstate* _state)
 		return NULL;
 
 	return _state->global;
+}
+
+WXDLhash_node* wxdl_state_add_func(WXDLstate* _state, const WXDLchar* _name, WXDLfunction func)
+{
+	if (_state == NULL)
+		return NULL;
+
+	return wxdl_hash_add_ptr(_state->funcs, _name, func);
+}
+
+WXDLfunction wxdl_state_get_func(WXDLstate* _state, const WXDLchar* _name)
+{
+	if (_state == NULL)
+		return NULL;
+
+	WXDLhash_node* n = wxdl_hash_find(_state->funcs, _name);
+	if (n == NULL)
+        return NULL;
+	return (WXDLfunction)n->v.data.p;
+}
+
+WXDLhash* wxdl_state_get_func_table(WXDLstate* _state)
+{
+	if (_state == NULL)
+		return NULL;
+
+	return _state->funcs;
+}
+
+WXDLstring_builder* wxdl_state_get_string_builder(WXDLstate* _state)
+{
+	if (_state == NULL)
+		return NULL;
+
+	return _state->builder;
 }
 
 // WXDLtext===============================================================================

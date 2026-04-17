@@ -35,6 +35,8 @@ typedef struct WXDLiterator
 
 	WXDLiterator_free_func free_func;
 
+	WXDLstring_builder* builder;
+
 	WXDLptr data;
 
 	// arr : 当前数组索引
@@ -82,10 +84,14 @@ WXDIALOGUE_API WXDLvalue* wxdl_set_iterator_data_float(WXDLiterator* _ite, WXDLf
 
 WXDIALOGUE_API WXDLvalue* wxdl_set_iterator_data_str(WXDLiterator* _ite, const WXDLchar* _v);
 
-WXDIALOGUE_API WXDLvalue* wxdl_set_iterator_data_str_ref(WXDLiterator* _ite, WXDLchar* _v);
+WXDIALOGUE_API WXDLvalue* wxdl_set_iterator_data_str_ref(WXDLiterator* _ite, WXDLstring* _v);
 
 WXDIALOGUE_API WXDLvalue* wxdl_set_iterator_data_hash(WXDLiterator* _ite, struct WXDLhash* _v);
 
+WXDIALOGUE_API WXDLvalue* wxdl_set_iterator_data_hash_ref(WXDLiterator* _ite, struct WXDLhash* _v);
+
 WXDIALOGUE_API WXDLvalue* wxdl_set_iterator_data_arr(WXDLiterator* _ite, struct WXDLarr* _v);
+
+WXDIALOGUE_API WXDLvalue* wxdl_set_iterator_data_arr_ref(WXDLiterator* _ite, struct WXDLarr* _v);
 
 #endif

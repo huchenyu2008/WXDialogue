@@ -1,6 +1,7 @@
 
 #include "iterator.h"
 #include "std.h"
+#include "string_builder.h"
 #include <stdlib.h>
 
 WXDLbool wxdl_iterator_init(WXDLiterator* _ite)
@@ -76,8 +77,7 @@ WXDLvalue* wxdl_set_iterator_data_null(WXDLiterator* _ite)
 	WXDLvalue* v = _ite->_v0;
 
 	wxdl_free_value(v);
-	v->data.i = 0;
-	v->type = WXDL_TYPE_NULL;
+	WXDL_V_SET_NULL(*v);
 
 	return v;
 }
@@ -87,8 +87,7 @@ WXDLvalue* wxdl_set_iterator_data_bool(WXDLiterator* _ite, WXDLbool _v)
 	WXDLvalue* v = _ite->_v0;
 
 	wxdl_free_value(v);
-	v->data.b = _v;
-	v->type = WXDL_TYPE_BOOL;
+	WXDL_V_SET_BOOL(*v, _v);
 
 	return v;
 }
@@ -98,8 +97,7 @@ WXDLvalue* wxdl_set_iterator_data_int(WXDLiterator* _ite, WXDLint _v)
 	WXDLvalue* v = _ite->_v0;
 
 	wxdl_free_value(v);
-	v->data.i = _v;
-	v->type = WXDL_TYPE_INT;
+	WXDL_V_SET_INT(*v, _v);
 
 	return v;
 }
@@ -109,8 +107,7 @@ WXDLvalue* wxdl_set_iterator_data_u64(WXDLiterator* _ite, WXDLu64 _v)
 	WXDLvalue* v = _ite->_v0;
 
 	wxdl_free_value(v);
-	v->data.u = _v;
-	v->type = WXDL_TYPE_INT;
+	WXDL_V_SET_UINT(*v, _v);
 
 	return v;
 }
@@ -120,8 +117,7 @@ WXDLvalue* wxdl_set_iterator_data_float(WXDLiterator* _ite, WXDLfloat _v)
 	WXDLvalue* v = _ite->_v0;
 
 	wxdl_free_value(v);
-	v->data.f = _v;
-	v->type = WXDL_TYPE_FLOAT;
+	WXDL_V_SET_FLOAT(*v, _v);
 
 	return v;
 }
@@ -131,19 +127,17 @@ WXDLvalue* wxdl_set_iterator_data_str(WXDLiterator* _ite, const WXDLchar* _v)
 	WXDLvalue* v = _ite->_v0;
 
 	wxdl_free_value(v);
-	v->data.s = wxdl_new_str(_v);
-	v->type = WXDL_TYPE_STR;
+	WXDL_V_SET_STR(*v, wxdl_build_string(_ite->builder, _v));
 
 	return v;
 }
 
-WXDLvalue* wxdl_set_iterator_data_str_ref(WXDLiterator* _ite, WXDLchar* _v)
+WXDLvalue* wxdl_set_iterator_data_str_ref(WXDLiterator* _ite, WXDLstring* _v)
 {
 	WXDLvalue* v = _ite->_v0;
 
 	wxdl_free_value(v);
-	v->data.s = _v;
-	v->type = WXDL_TYPE_STR;
+	WXDL_V_SET_STR(*v, _v);
 
 	return v;
 }
@@ -153,8 +147,17 @@ WXDLvalue* wxdl_set_iterator_data_hash(WXDLiterator* _ite, struct WXDLhash* _v)
 	WXDLvalue* v = _ite->_v0;
 
 	wxdl_free_value(v);
-	v->data.d = _v;
-	v->type = WXDL_TYPE_DIC;
+	WXDL_V_SET_DIC(*v, _v);
+
+	return v;
+}
+
+WXDLvalue* wxdl_set_iterator_data_hash_ref(WXDLiterator* _ite, struct WXDLhash* _v)
+{
+	WXDLvalue* v = _ite->_v0;
+
+	wxdl_free_value(v);
+	WXDL_V_SET_DIC_REF(*v, _v);
 
 	return v;
 }
@@ -164,8 +167,17 @@ WXDLvalue* wxdl_set_iterator_data_arr(WXDLiterator* _ite, struct WXDLarr* _v)
 	WXDLvalue* v = _ite->_v0;
 
 	wxdl_free_value(v);
-	v->data.a = _v;
-	v->type = WXDL_TYPE_ARR;
+	WXDL_V_SET_ARR(*v, _v);
+
+	return v;
+}
+
+WXDLvalue* wxdl_set_iterator_data_arr_ref(WXDLiterator* _ite, struct WXDLarr* _v)
+{
+	WXDLvalue* v = _ite->_v0;
+
+	wxdl_free_value(v);
+	WXDL_V_SET_ARR_REF(*v, _v);
 
 	return v;
 }
