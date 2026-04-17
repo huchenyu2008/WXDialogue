@@ -50,6 +50,7 @@ WXDLerror wxdl_call_ext(WXDLcall* _v, struct WXDLloader* _loader, WXDLvalue* _re
 	WXDLcall* c = NULL;
 	WXDLerror err = 0;
 
+	WXDLptr lp = wxdl_loader_userdata(_loader);
 	wxdl_set_loader_userdata(_loader, _v);
 	if (_after_destroy)
 	{
@@ -62,6 +63,7 @@ WXDLerror wxdl_call_ext(WXDLcall* _v, struct WXDLloader* _loader, WXDLvalue* _re
 		err = c->func(_loader, c->argv, c->argc, _ret);
 		wxdl_free_call(c, WXDL_TRUE);
 	}
+	wxdl_set_loader_userdata(_loader, lp);
 	return err;
 }
 

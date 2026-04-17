@@ -65,8 +65,10 @@ WXDLhash* wxdl_hash_copy_running(WXDLhash* _hash, struct WXDLloader* _loader)
             // 函数调用的的画就调用, 获取其返回值
             if (_loader != NULL && WXDL_NODE_TYPE(n1) == WXDL_TYPE_CALL)
             {
+			WXDLptr lp = wxdl_loader_userdata(_loader);
 				wxdl_set_loader_userdata(_loader, WXDL_V_CALL(n1->v));
                 wxdl_call(WXDL_V_CALL(n1->v), _loader, &n->v);
+				wxdl_set_loader_userdata(_loader, lp);
             }
             else
 			    wxdl_value_copy(&n->v, &n1->v);

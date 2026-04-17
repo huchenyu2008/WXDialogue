@@ -11,11 +11,16 @@ typedef struct WXDLstring_builder
     WXDLhash* hash;
 }WXDLstring_builder;
 
-WXDLstring_builder _wxdl_global_builder = {0};
+WXDLstring_builder* _wxdl_global_builder = NULL;
 
 WXDLstring_builder* wxdl_get_global_builder()
 {
-    return &_wxdl_global_builder;
+    if (_wxdl_global_builder == NULL)
+    {
+        _wxdl_global_builder = wxdl_new_builder();
+    }
+
+    return _wxdl_global_builder;
 }
 
 WXDLstring_builder* wxdl_new_builder()

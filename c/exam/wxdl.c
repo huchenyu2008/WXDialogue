@@ -8,6 +8,7 @@
 #include "../buff.h"
 #include "../string_builder.h"
 #include "../call.h"
+#include "../lib.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -16,7 +17,7 @@ WXDLerror print_1(struct WXDLloader* loader, WXDLvalue* args, WXDLu64 arg_count,
 	WXDLint p1 = wxdl_param_int(loader, &args[0]);
 	WXDL_ERR_LOG(loader, "Get Number %lld", p1);
 	printf("hello!!!\n");
-	WXDL_V_SET_INT(*ret, 1);
+	WXDL_V_SET_INT(*ret, p1);
 	printf("I'm call!!!\n");
 	return 0;
 }
@@ -48,7 +49,8 @@ int main()
 	wxdl_hash_add_float(h2, "scale", 0);
 
 	WXDLhash* global = wxdl_new_hash(16, sb);
-	wxdl_hash_add_int(global, "black", 1);
+	wxdl_hash_add_int(global, "black", 0);
+	wxdl_hash_add_int(global, "white", 0xFFFFFF);
 
 	WXDLhash* ext1 = wxdl_new_hash(12, sb);
 	wxdl_hash_add_int(ext1, "size", 12);
@@ -60,19 +62,19 @@ int main()
 	wxdl_state_add_local_sign(state, "view2", ext1);
 
 	wxdl_state_add_func(state, "p1", print_1);
-	wxdl_state_add_func(state, "getvar", getvar);
+	wxdl_init_std_lib(state);
 	char log_buff[4096];
 	memset(log_buff, 0, sizeof(log_buff));
 
 	printf("find %lld\n", wxdl_hash_path(wxdl_state_get_global(state), "color.black", 0)->v.data.i);
 
 	char text[] =
-		u8"{size : @p1(@p1(12)), data : color.black}";
+		u8"{size : @p1(@getvar('color.white')), data : color.black}";
 	printf("%s\n", text);
 
 
 
-	WXDLblock* data = wxdl_parse_block(state, text, 0, WXDL_FALSE, log_buff, sizeof(log_buff) - 1, "current");
+	WXDLblock* data = wxdl_parse_block(state, text, 0, WXDL_TRUE, log_buff, sizeof(log_buff) - 1, "current");
 
 
 	//printf("running\n");

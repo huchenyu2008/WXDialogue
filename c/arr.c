@@ -53,8 +53,10 @@ WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLloader* _loader)
 		v = &_arr->data[i];
 		if (_loader != NULL && v->type == WXDL_TYPE_CALL)
 		{
+			WXDLptr lp = wxdl_loader_userdata(_loader);
 			wxdl_set_loader_userdata(_loader, WXDL_V_CALL(*v));
 			wxdl_call(WXDL_V_CALL(*v), _loader, v);
+			wxdl_set_loader_userdata(_loader, lp);
 		}
 		wxdl_value_copy(&a->data[i], v);
 	}
