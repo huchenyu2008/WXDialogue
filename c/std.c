@@ -68,10 +68,6 @@ void wxdl_free_value(WXDLvalue* _pv)
 	if (_pv == NULL)
 		return;
 
-	_pv->type = WXDL_TYPE_NULL;
-
-	if (_pv->data.p == NULL)
-		return;
 	switch (_pv->type)
 	{
 	case WXDL_TYPE_DIC:
@@ -90,6 +86,8 @@ void wxdl_free_value(WXDLvalue* _pv)
 		}
 		break;
 	}
+
+	_pv->type = WXDL_TYPE_NULL;
 
 	_pv->data.p = NULL;
 }

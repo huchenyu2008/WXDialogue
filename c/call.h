@@ -3,13 +3,7 @@
 #include "define.h"
 
 // 添加函数调用信息, _argv将会直接被memcpy, 小心提前释放
-// 如果你在call函数中作返回值, 并且就用一次，推荐用wxdl_new_short_call
-// 不然要手动销毁
 WXDIALOGUE_API WXDLcall* wxdl_new_call(const WXDLchar* _name, WXDLfunction _func, WXDLvalue* _argv, WXDLu32 _argc, WXDLstring_builder* _builder);
-
-// 添加函数调用信息, _argv将会直接被memcpy, 小心提前释放
-// 与wxdl_new_call不同的是, 这个调用后就销毁
-WXDIALOGUE_API WXDLcall* wxdl_new_short_call(const WXDLchar* _name, WXDLfunction _func, WXDLvalue* _argv, WXDLu32 _argc, WXDLstring_builder* _builder);
 
 // _is_free_param为是否销毁参数
 WXDIALOGUE_API void wxdl_free_call(WXDLcall* _call, WXDLbool _is_free_param);
@@ -20,9 +14,6 @@ WXDIALOGUE_API WXDLcall* wxdl_call_copy(WXDLcall* _v);
 // _after_destroy是是否在调用后释放call
 // 正常_after_destroy都是启用的, 除了在call期间的get_param操作
 WXDIALOGUE_API WXDLerror wxdl_call_ext(WXDLcall* _v, struct WXDLloader* _loader, WXDLvalue* _ret, WXDLbool _after_destroy);
-
-// 将call设置为短命
-WXDIALOGUE_API void wxdl_set_call_short(WXDLcall* _v, WXDLbool _f);
 
 // 调用函数
 // 这不会释放call

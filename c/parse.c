@@ -1597,7 +1597,7 @@ void wxdl_free_block(WXDLblock* _block)
 {
     if (_block != NULL)
     {
-        if (_block->data != NULL && _block->is_ref == WXDL_FALSE) wxdl_free_hash(_block->data);
+        if (_block->data != NULL && _block->is_ref == WXDL_FALSE) { wxdl_free_hash(_block->data);}
         wxdl_free(_block);
     }
 }

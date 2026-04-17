@@ -23,35 +23,13 @@ WXDLcall* wxdl_new_call(const WXDLchar* _name, WXDLfunction _func, WXDLvalue* _a
 	c->where = NULL;
 	c->line = 0;
 	c->xpos = 0;
-    c->is_short = WXDL_FALSE;
 	return c;
-}
-
-WXDLcall* wxdl_new_short_call(const WXDLchar* _name, WXDLfunction _func, WXDLvalue* _argv, WXDLu32 _argc, WXDLstring_builder* _builder)
-{
-    WXDLcall* c = wxdl_new_call(_name, _func, _argv, _argc, _builder);
-    c->is_short = WXDL_TRUE;
-    return c;
 }
 
 void wxdl_free_call(WXDLcall* _call, WXDLbool _is_free_param)
 {
 	if (_call == NULL)
 		return;
-
-
-    // 寻找短命call
-    for (WXDLu32 i = 0; i < _call->argc; i++)
-    {
-        WXDLvalue* param = &_call->argv[i];
-        if (WXDL_V_TYPE(*param) == WXDL_TYPE_CALL)
-        {
-            WXDLcall* c = WXDL_V_CALL(*param);
-            if (c->is_short)
-                wxdl_free_call(c, WXDL_TRUE);
-            WXDL_V_TYPE(*param) = WXDL_TYPE_NULL;
-        }
-    }
 
 	if (_is_free_param)
 	    wxdl_free_value_arr(_call->argv, _call->argc);
@@ -60,12 +38,6 @@ void wxdl_free_call(WXDLcall* _call, WXDLbool _is_free_param)
 		wxdl_free_string(_call->where);
 	if (_call->name != NULL)
 		wxdl_free_string(_call->name);
-}
-
-void wxdl_set_call_short(WXDLcall* _v, WXDLbool _f)
-{
-    if (_v == NULL) return;
-    _v->is_short = _f;
 }
 
 WXDLerror wxdl_call_ext(WXDLcall* _v, struct WXDLloader* _loader, WXDLvalue* _ret, WXDLbool _after_destroy)

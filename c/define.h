@@ -132,8 +132,6 @@ typedef struct WXDLcall
 	WXDLstring* where;
 	WXDLu32 line;
 	WXDLu32 xpos;
-	// 是否短命(调用后就销毁)
-	WXDLbool is_short;
 }WXDLcall;
 
 // 文本缓存组
