@@ -574,8 +574,7 @@ WXDLerror _wxdl_parse_arr(WXDLloader* _loader, WXDLarr* _arr)
         }
         else
         {
-            wxdl_arr_add_null(_arr);
-            err = _wxdl_parse_data(_loader, wxdl_arr_at(_arr, wxdl_arr_size(_arr) - 1), NULL);
+            err = _wxdl_parse_data(_loader, wxdl_arr_add_null(_arr), NULL);
             if (err)
                 return err;
             is_split = WXDL_TRUE;
@@ -885,8 +884,10 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
     _wxdl_loader_next(_loader);
 
 
-    WXDLvalue argv[WXDL_FUNC_MAX_PARAM_COUNT];
-    WXDLu32 argc = 0;
+    WXDLcall* call = wxdl_new_call(id, func, NULL, 0, _loader->builder);
+    call->line = (WXDLu32)_loader->line;
+    call->xpos = (WXDLu32)(_loader->ptr - xpos);
+    call->where = wxdl_build_string(_loader->builder, _loader->where);
     WXDLbool wait = WXDL_FALSE;
     WXDLchar c = 0;
     for (; !_wxdl_loader_eof(_loader);)
@@ -902,17 +903,16 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
                 // 这里是为了让报错指针指向函数名称位置
                 WXDLu64 lp = _loader->ptr;
                 _loader->ptr = xpos;
-                err = func(_loader, argv, argc, pv);
+                err = wxdl_call(call, _loader, pv);
                 _loader->ptr = lp;
-                wxdl_free_value_arr(argv, argc);
+                wxdl_free_call(call, WXDL_TRUE);
             }
             else
             {
-                WXDLcall* c = wxdl_new_call(id, func, argv, argc, _loader->builder);
-                c->line = (WXDLu32)_loader->line;
-                c->xpos = (WXDLu32)(_loader->ptr - xpos);
-                c->where = wxdl_build_string(_loader->builder, _loader->where);
-                WXDL_V_SET_CALL(*pv, c);
+                call->line = (WXDLu32)_loader->line;
+                call->xpos = (WXDLu32)(_loader->ptr - xpos);
+                call->where = wxdl_build_string(_loader->builder, _loader->where);
+                WXDL_V_SET_CALL(*pv, call);
             }
             wxdl_free(id);
             return err;
@@ -920,41 +920,41 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
         else if (c == ',')
         {
             wait = WXDL_FALSE;
+            _wxdl_loader_next(_loader);
         }
         else
         {
-            if (argc >= WXDL_FUNC_MAX_PARAM_COUNT)
+            if (call->argc >= WXDL_FUNC_MAX_PARAM_COUNT)
             {
-                wxdl_free_value_arr(argv, argc);
+                wxdl_free_call(call, WXDL_TRUE);
                 wxdl_free(id);
-                WXDL_LOG_WRITE(_loader, _loader->where, "Parameter count exceeds supported limit (argc > 24)");
+                WXDL_LOG_WRITE(_loader, _loader->where, "Parameter count exceeds supported limit (argc > WXDL_FUNC_MAX_PARAM_COUNT)");
                 return 1;
             }
             else if (wait == WXDL_TRUE)
             {
-                wxdl_free_value_arr(argv, argc);
+                wxdl_free_call(call, WXDL_TRUE);
                 wxdl_free(id);
                 WXDL_LOG_WRITE(_loader, _loader->where, "Missing separator ',' between function call parameters");
                 return 1;
             }
 
             _loader->call_layer_count += 1;
-            err = _wxdl_parse_data(_loader, &argv[argc], NULL);
+            err = _wxdl_parse_data(_loader, wxdl_call_add_null(call), NULL);
             _loader->call_layer_count -= 1;
             if (err)
             {
-                wxdl_free_value_arr(argv, argc);
+                wxdl_free_call(call, WXDL_TRUE);
                 wxdl_free(id);
                 return 1;
             }
 
 
             wait = WXDL_TRUE;
-            argc += 1;
         }
     }
 
-    wxdl_free_value_arr(argv, argc);
+    wxdl_free_call(call, WXDL_TRUE);
     WXDL_LOG_WRITE(_loader, _loader->where, "Parse function error, you seem to be missing a terminator");
 
     wxdl_free(id);
@@ -1034,7 +1034,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
                     return 1;
                 }
 
-             wxdl_value_copy(_v, pv);
+             wxdl_value_shallow_copy(_v, pv);
         }
         else
         {

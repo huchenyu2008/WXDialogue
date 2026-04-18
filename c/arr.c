@@ -58,7 +58,7 @@ WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLloader* _loader)
 			wxdl_call(WXDL_V_CALL(*v), _loader, v);
 			wxdl_set_loader_userdata(_loader, lp);
 		}
-		wxdl_value_copy(&a->data[i], v);
+		wxdl_value_shallow_copy(&a->data[i], v);
 	}
 
 	return a;
@@ -126,7 +126,7 @@ void _wxdl_arr_ext(WXDLarr* _arr, WXDLu64 _new_size)
 	_arr->data = wxdl_malloc(sizeof(WXDLvalue) * _arr->max_size);
 	wxdl_copy(_arr->data, la, sizeof(WXDLvalue) * _arr->size);
 
-	wxdl_free_value(la);
+	wxdl_free(la);
 }
 
 // 检查数组大小, 判断是否扩容, 如果要则扩容
@@ -250,7 +250,7 @@ WXDLvalue* wxdl_arr_insert_ptr(WXDLarr* _arr,  WXDLptr _v, WXDLu64 _index)
 
 WXDLvalue* wxdl_arr_insert_v(WXDLarr* _arr, WXDLvalue* _v, WXDLu64 _index)
 {
-	wxdl_value_copy(wxdl_arr_insert_null(_arr, _index), _v);
+	wxdl_value_shallow_copy(wxdl_arr_insert_null(_arr, _index), _v);
 	return &_arr->data[_index];
 }
 // add==========================================================
@@ -370,7 +370,7 @@ WXDLvalue* wxdl_arr_add_value(WXDLarr* _arr, WXDLvalue* _v)
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
 
-	wxdl_value_copy(v, _v);
+	wxdl_value_shallow_copy(v, _v);
 	return v;
 }
 
@@ -434,10 +434,10 @@ WXDLbool _wxdl_arr_ite_last(WXDLiterator* _ite)
 WXDLvalue* _wxdl_arr_ite_get(WXDLiterator* _ite)
 {
 	WXDLarr* arr = (WXDLarr*)_ite->data;
-	if ((WXDLu64)_ite->user1 > arr->size) return NULL;
+	if ((WXDLu64)_ite->user1 >= arr->size) return NULL;
 	else
 	{
-		return _ite->data;
+		return wxdl_arr_at(_ite->data, (WXDLu64)_ite->user1);
 	}
 
 }

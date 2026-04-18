@@ -58,6 +58,52 @@ void wxdl_value_copy(WXDLvalue* _v1, WXDLvalue* _v2)
 	wxdl_value_copy_running(_v1, _v2, NULL);
 }
 
+void wxdl_value_shallow_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLloader* _loader)
+{
+	if (_v1 == NULL || _v2 == NULL)
+		return;
+
+	wxdl_free_value(_v1);
+
+	_v1->type = _v2->type;
+	switch (_v2->type)
+	{
+	case WXDL_TYPE_STR:
+		WXDL_V_SET_STR(*_v1, wxdl_string_ref(_v2->data.s));
+		break;
+	case WXDL_TYPE_DIC:
+		WXDL_V_SET_DIC(*_v1, wxdl_hash_ref(_v2->data.d));
+		break;
+	case WXDL_TYPE_ARR:
+		WXDL_V_SET_ARR(*_v1, wxdl_arr_ref(_v2->data.a));
+		break;
+	case WXDL_TYPE_CALL:
+		if (_loader == NULL)
+			if (_v2->flag == 0)
+			{
+				WXDL_V_SET_CALL(*_v1, wxdl_call_copy(_v2->data.c));
+			}
+			else
+			{
+
+				WXDL_V_SET_CALL_REF(*_v1, _v2->data.c);
+			}
+		else
+			wxdl_call(_v2->data.c, _loader, _v1);
+		break;
+	default:
+		_v1->data.p = _v2->data.p;
+		break;
+	}
+
+	_v1->flag = _v2->flag;
+}
+
+void wxdl_value_shallow_copy(WXDLvalue* _v1, WXDLvalue* _v2)
+{
+	wxdl_value_shallow_copy_running(_v1, _v2, NULL);
+}
+
 void wxdl_free(WXDLptr _p)
 {
 	free(_p);

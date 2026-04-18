@@ -132,6 +132,7 @@ WXDLbuff* wxdl_new_buff(WXDLu32 _buffsize)
 {
     WXDLbuff* b = (WXDLbuff*)wxdl_malloc(sizeof(WXDLbuff));
     b->buff = (WXDLchar*)wxdl_malloc(_buffsize);
+    wxdl_set(b->buff, 0, _buffsize);
     b->can_write_size = _buffsize;
     b->buffsize = _buffsize;
     return b;

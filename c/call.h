@@ -64,11 +64,12 @@ WXDIALOGUE_API WXDLvalue* wxdl_call_set_arr(WXDLcall* _c, WXDLu64 _index, WXDLar
 WXDIALOGUE_API WXDLvalue* wxdl_call_set_call(WXDLcall* _c, WXDLu64 _index, WXDLcall* _v);
 
 WXDIALOGUE_API WXDLvalue* wxdl_call_set_call_ref(WXDLcall* _c, WXDLu64 _index, WXDLcall* _v);
-
 // 获取调用的参数数量
 WXDIALOGUE_API WXDLu64 wxdl_call_param_size(WXDLcall* _c);
 
 WXDIALOGUE_API WXDLfunction wxdl_call_param_func(WXDLcall* _c);
+
+WXDIALOGUE_API WXDLvalue* wxdl_param_at(WXDLcall* _c, WXDLu64 _index);
 
 // 获取参数(运行call，返回返回值，将返回值设置给_v)
 WXDIALOGUE_API WXDLvalue* wxdl_param_running(struct WXDLloader* _loader, WXDLvalue* _v);
@@ -88,4 +89,12 @@ WXDIALOGUE_API WXDLhash* wxdl_param_hash(struct WXDLloader* _loader, WXDLvalue* 
 WXDIALOGUE_API WXDLarr* wxdl_param_arr(struct WXDLloader* _loader, WXDLvalue* _v);
 
 WXDIALOGUE_API WXDLcall* wxdl_param_call(struct WXDLloader* _loader, WXDLvalue* _v);
+
+WXDIALOGUE_API WXDLvalue* wxdl_param_value(struct WXDLloader* _loader, WXDLvalue* _v);
+// 确定参数类型
+// 返回出错位置(如果参数不足返回flag_size)
+// 产生为空返回(WXDLu32)-2，正确返回(WXDLu32)-1
+WXDIALOGUE_API WXDLu32 wxdl_param_check(const WXDLvalue* _argv, WXDLu32 _argc, const WXDLflag* flags, WXDLu32 flag_size);
+
+
 #endif

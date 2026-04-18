@@ -36,9 +36,9 @@ WXDLhash* wxdl_hash_ref(WXDLhash* _hash)
 {
     if (_hash == NULL)
 		return NULL;
-	
+
 	_hash->refcount += 1;
-	
+
 	return _hash;
 }
 
@@ -648,7 +648,7 @@ void wxdl_set_node_v(WXDLhash_node* _n, WXDLvalue* _v)
 		return;
 
 	wxdl_free_value(&_n->v);
-	wxdl_value_copy(&_n->v, _v);
+	wxdl_value_shallow_copy(&_n->v, _v);
 }
 
 void wxdl_move_node_v(WXDLhash_node* _n, WXDLvalue* _v)

@@ -5,7 +5,38 @@
 #include "arr.h"
 #include "std.h"
 #include "parse.h"
+#include <stdlib.h>
 #include <string.h>
+
+// 扩充数组
+void _wxdl_call_ext(WXDLcall* _c, WXDLu32 _new_size)
+{
+	if (_new_size <= _c->max_argc)
+		return;
+	WXDLvalue* la = _c->argv;
+
+	_c->max_argc = _new_size;
+	_c->argv = wxdl_malloc(sizeof(WXDLvalue) * _c->max_argc);
+	if (la != NULL)
+	    wxdl_copy(_c->argv, la, sizeof(WXDLvalue) * _c->argc);
+
+	wxdl_free(la);
+}
+
+// 检查数组大小, 判断是否扩容, 如果要则扩容
+void _wxdl_call_check_size(WXDLcall* _c, WXDLu32 _add_size)
+{
+	WXDLu32 ns = _c->argc + _add_size;
+	if (ns > _c->max_argc)
+	{
+		// 计算扩大容量
+		WXDLu32 size = (WXDLu64)(_c->max_argc * 2);
+		while (size < ns)
+			size = (WXDLu64)(size * 2);
+
+		_wxdl_call_ext(_c, size);
+	}
+}
 
 WXDLcall* wxdl_new_call(const WXDLchar* _name, WXDLfunction _func, WXDLvalue* _argv, WXDLu32 _argc, WXDLstring_builder* _builder)
 {
@@ -13,6 +44,9 @@ WXDLcall* wxdl_new_call(const WXDLchar* _name, WXDLfunction _func, WXDLvalue* _a
 	c->func = _func;
 	if (_builder == NULL) _builder = wxdl_get_global_builder();
 	c->builder = _builder;
+	c->max_argc = 0;
+	c->argv = NULL;
+	_wxdl_call_ext(c, 2);
 	if (_argv != NULL)
 	{
 		wxdl_copy(c->argv, _argv, sizeof(WXDLvalue) * _argc);
@@ -157,7 +191,11 @@ WXDLvalue* wxdl_call_add_call_ref(WXDLcall* _c, WXDLcall* _v)
 WXDLvalue* wxdl_call_set_null(WXDLcall* _c, WXDLu64 _index)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_NULL(_c->argv[_index]);
     return &_c->argv[_index];
 }
@@ -165,7 +203,11 @@ WXDLvalue* wxdl_call_set_null(WXDLcall* _c, WXDLu64 _index)
 WXDLvalue* wxdl_call_set_bool(WXDLcall* _c, WXDLu64 _index, WXDLbool _v)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_BOOL(_c->argv[_index], _v);
     return &_c->argv[_index];
 }
@@ -173,7 +215,11 @@ WXDLvalue* wxdl_call_set_bool(WXDLcall* _c, WXDLu64 _index, WXDLbool _v)
 WXDLvalue* wxdl_call_set_int(WXDLcall* _c, WXDLu64 _index, WXDLint _v)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_INT(_c->argv[_index], _v);
     return &_c->argv[_index];
 }
@@ -181,7 +227,11 @@ WXDLvalue* wxdl_call_set_int(WXDLcall* _c, WXDLu64 _index, WXDLint _v)
 WXDLvalue* wxdl_call_set_u64(WXDLcall* _c, WXDLu64 _index, WXDLu64 _v)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_UINT(_c->argv[_index], _v);
     return &_c->argv[_index];
 }
@@ -189,7 +239,11 @@ WXDLvalue* wxdl_call_set_u64(WXDLcall* _c, WXDLu64 _index, WXDLu64 _v)
 WXDLvalue* wxdl_call_set_float(WXDLcall* _c, WXDLu64 _index, WXDLfloat _v)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_FLOAT(_c->argv[_index], _v);
     return &_c->argv[_index];
 }
@@ -197,7 +251,11 @@ WXDLvalue* wxdl_call_set_float(WXDLcall* _c, WXDLu64 _index, WXDLfloat _v)
 WXDLvalue* wxdl_call_set_str(WXDLcall* _c, WXDLu64 _index, const WXDLchar* _v)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_STR(_c->argv[_index], wxdl_build_string(_c->builder, _v));
     return &_c->argv[_index];
 }
@@ -206,7 +264,11 @@ WXDLvalue* wxdl_call_set_str(WXDLcall* _c, WXDLu64 _index, const WXDLchar* _v)
 WXDLvalue* wxdl_call_set_str_ref(WXDLcall* _c, WXDLu64 _index, WXDLstring* _v)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_STR(_c->argv[_index], _v);
     return &_c->argv[_index];
 }
@@ -214,7 +276,11 @@ WXDLvalue* wxdl_call_set_str_ref(WXDLcall* _c, WXDLu64 _index, WXDLstring* _v)
 WXDLvalue* wxdl_call_set_hash(WXDLcall* _c, WXDLu64 _index, WXDLhash* _v)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_DIC(_c->argv[_index], wxdl_hash_ref(_v));
     return &_c->argv[_index];
 }
@@ -222,7 +288,11 @@ WXDLvalue* wxdl_call_set_hash(WXDLcall* _c, WXDLu64 _index, WXDLhash* _v)
 WXDLvalue* wxdl_call_set_arr(WXDLcall* _c, WXDLu64 _index, WXDLarr* _v)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_ARR(_c->argv[_index], wxdl_arr_ref(_v));
     return &_c->argv[_index];
 }
@@ -230,7 +300,11 @@ WXDLvalue* wxdl_call_set_arr(WXDLcall* _c, WXDLu64 _index, WXDLarr* _v)
 WXDLvalue* wxdl_call_set_call(WXDLcall* _c, WXDLu64 _index, WXDLcall* _v)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_CALL(_c->argv[_index], _v);
     return &_c->argv[_index];
 }
@@ -238,8 +312,18 @@ WXDLvalue* wxdl_call_set_call(WXDLcall* _c, WXDLu64 _index, WXDLcall* _v)
 WXDLvalue* wxdl_call_set_call_ref(WXDLcall* _c, WXDLu64 _index, WXDLcall* _v)
 {
     if (_index >= WXDL_FUNC_MAX_PARAM_COUNT) return NULL;
-    else if (_index >= _c->argc) _c->argc = (WXDLu32)_index + 1;
+    else if (_index >= _c->argc)
+    {
+        _wxdl_call_check_size(_c, (WXDLu32)_index + 1 - _c->argc);
+        _c->argc = (WXDLu32)_index + 1;
+    }
     WXDL_V_SET_CALL_REF(_c->argv[_index], _v);
+    return &_c->argv[_index];
+}
+
+WXDLvalue* wxdl_param_at(WXDLcall* _c, WXDLu64 _index)
+{
+    if (_index >= _c->argc) return NULL;
     return &_c->argv[_index];
 }
 
@@ -440,4 +524,25 @@ WXDLcall* wxdl_param_call(struct WXDLloader* _loader, WXDLvalue* _v)
     }
 
     return NULL;
+}
+
+WXDLvalue* wxdl_param_value(struct WXDLloader* _loader, WXDLvalue* _v)
+{
+    if (_loader == NULL || _v == NULL) return NULL;
+    WXDLvalue* param = wxdl_param_running(_loader, _v);
+
+    return param;
+}
+
+WXDLu32 wxdl_param_check(const WXDLvalue* _argv, WXDLu32 _argc, const WXDLflag* flags, WXDLu32 flag_size)
+{
+    if (_argv == NULL || flags == NULL) return (WXDLu32)-2;
+    if (_argc < flag_size) return flag_size;
+
+    for (WXDLu32 i = 0; i < flag_size; i++)
+    {
+        if (!wxdl_is_type_convert(WXDL_V_TYPE(_argv[i]), flags[i])) return i;
+    }
+
+    return (WXDLu32)-1;
 }

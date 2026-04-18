@@ -6,6 +6,7 @@
 #include "iterator.h"
 #include "parse.h"
 #include "std.h"
+#include "call.h"
 #include "string_builder.h"
 #include <stdio.h>
 
@@ -230,11 +231,22 @@ WXDLu64 _wxdl_saver_out_arr(WXDLsaver* _saver, WXDLarr* _v, WXDLu64 _deep)
     WXDLvalue* pv;
     WXDLiterator* ite;
 
-    s += _wxdl_saver_out_tab(_saver, _deep);
     wxdl_buff_set_write_chr(_saver->buff, '[');
-    s += _wxdl_saver_out_enter(_saver);
 
     WXDLu64 arrlen = wxdl_arr_size(_v);
+    // 是否强制展开（里面有表，数组，或call）
+    WXDLbool most_expand = WXDL_FALSE;
+
+    if (arrlen < _saver->opinion.expand_arr_size)
+    {
+        for (WXDLu64 i = 0; i < wxdl_arr_size(_v); i++)
+        {
+            WXDLflag t = WXDL_V_TYPE(*wxdl_arr_at(_v, i));
+            if (t == WXDL_TYPE_DIC || t == WXDL_TYPE_ARR || t == WXDL_TYPE_CALL)
+                most_expand = WXDL_TRUE;
+        }
+    }
+
 
     WXDLu64 i = 0;
     ite = wxdl_arr_ite(_v);
@@ -242,21 +254,25 @@ WXDLu64 _wxdl_saver_out_arr(WXDLsaver* _saver, WXDLarr* _v, WXDLu64 _deep)
         pv = wxdl_iterator_get(ite);
         if (pv != NULL)
         {
-            if (i > 0)
+            if (arrlen >= _saver->opinion.expand_arr_size || most_expand)
             {
-                wxdl_buff_set_write(_saver->buff, ", ", 2), s += 2;
-                if (arrlen >= _saver->opinion.expand_arr_size)
+                s += _wxdl_saver_out_enter(_saver);
+                s += _wxdl_saver_out_tab(_saver, _deep + 1);
+            }
+            _wxdl_saver_out_value(_saver, pv, _deep + 1);
+            wxdl_buff_set_write(_saver->buff, ", ", 2), s += 2;
+            if (_saver->opinion.open_format)
+            {
+                if (arrlen >= _saver->opinion.expand_arr_size || most_expand)
                     s += _wxdl_saver_out_enter(_saver);
             }
-            _wxdl_saver_out_value(_saver, pv, _deep);
             i++;
         }
     }while (wxdl_iterator_next(ite));
 
-    if (arrlen >= _saver->opinion.expand_arr_size)
+    if (arrlen >= _saver->opinion.expand_arr_size || most_expand)
         s += _wxdl_saver_out_tab(_saver, _deep);
     wxdl_buff_set_write_chr(_saver->buff, ']');
-    s += _wxdl_saver_out_enter(_saver);
 
     return s;
 }
@@ -273,9 +289,18 @@ WXDLu64 _wxdl_saver_out_call(WXDLsaver* _saver, WXDLcall* _v, WXDLu64 _deep)
     wxdl_buff_set_write_chr(_saver->buff, '(');
 
     WXDLu64 arrlen = _v->argc;
+    // 是否强制展开（里面有表，数组，或call）
+    WXDLbool most_expand = WXDL_FALSE;
 
-    if (arrlen >= _saver->opinion.expand_param_size)
-        s += _wxdl_saver_out_enter(_saver);
+    if (arrlen < _saver->opinion.expand_param_size)
+    {
+        for (WXDLu64 i = 0; i < wxdl_call_param_size(_v); i++)
+        {
+            WXDLflag t = WXDL_V_TYPE(*wxdl_param_at(_v, i));
+            if (t == WXDL_TYPE_DIC || t == WXDL_TYPE_ARR || t == WXDL_TYPE_CALL)
+                most_expand = WXDL_TRUE;
+        }
+    }
 
 
     WXDLu64 j = 0;
@@ -283,16 +308,16 @@ WXDLu64 _wxdl_saver_out_call(WXDLsaver* _saver, WXDLcall* _v, WXDLu64 _deep)
     {
         pv = &_v->argv[i];
 
-        if (j > 0)
+        if (arrlen >= _saver->opinion.expand_param_size || most_expand)
         {
-            wxdl_buff_set_write(_saver->buff, ", ", 2), s += 2;
-            if (arrlen >= _saver->opinion.expand_arr_size)
-                s += _wxdl_saver_out_enter(_saver);
+            s += _wxdl_saver_out_enter(_saver);
+            s += _wxdl_saver_out_tab(_saver, _deep + 1);
         }
-        _wxdl_saver_out_value(_saver, pv, _deep);
+        _wxdl_saver_out_value(_saver, pv, _deep + 1);
+        wxdl_buff_set_write(_saver->buff, ", ", 2), s += 2;
         if (_saver->opinion.open_format)
         {
-            if (arrlen >= _saver->opinion.expand_param_size)
+            if (arrlen >= _saver->opinion.expand_param_size || most_expand)
                 s += _wxdl_saver_out_enter(_saver);
         }
         j++;

@@ -58,9 +58,17 @@
 
 WXDIALOGUE_API WXDLptr wxdl_malloc(WXDLint _malloc_size);
 
+// 深拷贝
 WXDIALOGUE_API void wxdl_value_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLloader* _loader);
 
+// 深拷贝
 WXDIALOGUE_API void wxdl_value_copy(WXDLvalue* _v1, WXDLvalue* _v2);
+
+// 浅拷贝
+WXDIALOGUE_API void wxdl_value_shallow_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLloader* _loader);
+
+// 浅拷贝
+WXDIALOGUE_API void wxdl_value_shallow_copy(WXDLvalue* _v1, WXDLvalue* _v2);
 
 WXDIALOGUE_API void wxdl_free(WXDLptr _p);
 

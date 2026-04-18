@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
-WXDLerror print_1(struct WXDLloader* loader, WXDLvalue* args, WXDLu64 arg_count, WXDLvalue* ret)
+WXDLerror print_1(struct WXDLloader* loader, WXDLvalue* args, WXDLu32 arg_count, WXDLvalue* ret)
 {
 	WXDLint p1 = wxdl_param_int(loader, &args[0]);
 	WXDL_ERR_LOG(loader, "Get Number %lld", p1);
@@ -22,7 +22,7 @@ WXDLerror print_1(struct WXDLloader* loader, WXDLvalue* args, WXDLu64 arg_count,
 	return 0;
 }
 
-WXDLerror getvar(struct WXDLloader* loader, WXDLvalue* args, WXDLu64 arg_count, WXDLvalue* ret)
+WXDLerror getvar(struct WXDLloader* loader, WXDLvalue* args, WXDLu32 arg_count, WXDLvalue* ret)
 {
     WXDLstate* s = wxdl_loader_state(loader);
     WXDLhash* n = wxdl_state_get_global(s);
@@ -63,20 +63,21 @@ int main()
 
 	wxdl_state_add_func(state, "p1", print_1);
 	wxdl_init_std_lib(state);
-	char log_buff[4096];
+	char log_buff[4096] = {0};
 	memset(log_buff, 0, sizeof(log_buff));
 
 	printf("find %lld\n", wxdl_hash_path(wxdl_state_get_global(state), "color.black", 0)->v.data.i);
 
 	char text[] =
-		u8"{size : @p1(@getvar('color.white')), data : color.black}";
+		u8"{size : @p1(@getvar('color.white'), [1, [1, 2]]), data : color.black}";
 	printf("%s\n", text);
 
 
 
-	WXDLblock* data = wxdl_parse_block(state, text, 0, WXDL_TRUE, log_buff, sizeof(log_buff) - 1, "current");
+	WXDLblock* data = wxdl_parse_block(state, text, 0, WXDL_FALSE, log_buff, sizeof(log_buff) - 1, "current");
 
 
+	printf("%d\n", 1111);
 	//printf("running\n");
 	//WXDLhash* ret = wxdl_block_running(state, data, log_buff, sizeof(log_buff) - 1);
 	//printf("parse err : %d\n", data == NULL);

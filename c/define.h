@@ -21,7 +21,7 @@
 #define WXDL_VERSION 1002
 
 // 调用函数最大参数数量
-#define WXDL_FUNC_MAX_PARAM_COUNT 8
+#define WXDL_FUNC_MAX_PARAM_COUNT 65534
 
 #define WXDL_FUNC_NAME_GET_GLOBAL_VAR "getvar"
 
@@ -118,13 +118,14 @@ typedef struct WXDLvalue
 }WXDLvalue;
 
 // 调用函数
-typedef WXDLerror (*WXDLfunction)(struct WXDLloader* loader, struct WXDLvalue* args, WXDLu64 arg_count, struct WXDLvalue* ret);
+typedef WXDLerror (*WXDLfunction)(struct WXDLloader* loader, struct WXDLvalue* args, WXDLu32 arg_count, struct WXDLvalue* ret);
 
 // 函数调用信息
 typedef struct WXDLcall
 {
-    WXDLvalue argv[WXDL_FUNC_MAX_PARAM_COUNT];
+    WXDLvalue* argv;
     WXDLu32 argc;
+    WXDLu32 max_argc;
     WXDLfunction func;
 
     WXDLstring_builder* builder;
