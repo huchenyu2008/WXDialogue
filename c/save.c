@@ -323,7 +323,7 @@ WXDLu64 _wxdl_saver_out_call(WXDLsaver* _saver, WXDLcall* _v, WXDLu64 _deep)
         j++;
     }
 
-    if (arrlen >= _saver->opinion.expand_param_size)
+    if (arrlen >= _saver->opinion.expand_param_size || most_expand)
         s += _wxdl_saver_out_tab(_saver, _deep);
     wxdl_buff_set_write_chr(_saver->buff, ')');
 
