@@ -13,27 +13,27 @@ typedef struct WXDLlog
 #define WXDL_ERR_LOG(loader, text, ...) \
     {\
         static char _wxdl_log_info_buff[128];\
-        sprintf_s(_wxdl_log_info_buff, 1024, text, __VA_ARGS__);\
+        snprintf(_wxdl_log_info_buff, 1024, text, __VA_ARGS__);\
         wxdl_log_call_error(loader, _wxdl_log_info_buff);\
     }
 #define WXDL_LOG_WRITE(loader, where, text, ...) \
     {\
         static char _wxdl_log_info_buff[128];\
-        sprintf_s(_wxdl_log_info_buff, 1024, text, __VA_ARGS__);\
+        snprintf(_wxdl_log_info_buff, 1024, text, __VA_ARGS__);\
         wxdl_log_error(loader, where, _wxdl_log_info_buff);\
     }
 #else
 #define WXDL_ERR_LOG(loader, text, ...) \
     {\
         static char _wxdl_log_info_buff[128];\
-        sprintf_s(_wxdl_log_info_buff, 1024, text, ##__VA_ARGS__);\
+        snprintf(_wxdl_log_info_buff, 1024, text, ##__VA_ARGS__);\
         wxdl_log_call_error(loader, _wxdl_log_info_buff);\
     }
 
 #define WXDL_LOG_WRITE(loader, where, text, ...) \
     {\
         static char _wxdl_log_info_buff[128];\
-        sprintf_s(_wxdl_log_info_buff, 1024, text, ##__VA_ARGS__);\
+        snprintf(_wxdl_log_info_buff, 1024, text, ##__VA_ARGS__);\
         wxdl_log_error(loader, where, _wxdl_log_info_buff);\
     }
 #endif

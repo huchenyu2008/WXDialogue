@@ -134,7 +134,7 @@ WXDLu64 _wxdl_saver_out_enter(WXDLsaver* _saver)
 WXDLu64 _wxdl_saver_out_int(WXDLsaver* _saver, WXDLint _v)
 {
     char buff[256];
-    WXDLu64 s = sprintf_s(buff, sizeof(buff), "%lld", _v);
+    WXDLu64 s = snprintf(buff, sizeof(buff), "%lld", _v);
     wxdl_buff_set_write(_saver->buff, buff, s);
     return s;
 }
@@ -142,7 +142,7 @@ WXDLu64 _wxdl_saver_out_int(WXDLsaver* _saver, WXDLint _v)
 WXDLu64 _wxdl_saver_out_float(WXDLsaver* _saver, WXDLfloat _v)
 {
     char buff[256];
-    WXDLu64 s = sprintf_s(buff, sizeof(buff), "%lf", _v);
+    WXDLu64 s = snprintf(buff, sizeof(buff), "%lf", _v);
     wxdl_buff_set_write(_saver->buff, buff, s);
     return s;
 }
