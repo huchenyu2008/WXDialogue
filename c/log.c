@@ -120,14 +120,14 @@ void wxdl_log_call_error(WXDLloader* loader, const WXDLchar* text)
 {
     if (loader->log_buff == NULL) return;
 
+    WXDLcall* c = (WXDLcall*)wxdl_loader_userdata(loader);
 
-    if (loader->is_running_call)
+    if (loader->is_running_call && c == NULL)
     {
         wxdl_log_error(loader, loader->where, text);
         return;
     }
 
-    WXDLcall* c = (WXDLcall*)wxdl_loader_userdata(loader);
     if (c != NULL && c->where != NULL)
         loader->log_len += (WXDLu64)sprintf_s(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "WXDL Call Error file %s, pos (%d, %d), call '%s' :\n", c->where->str, c->line, c->xpos, c->name->str);
     else

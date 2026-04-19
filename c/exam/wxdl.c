@@ -69,7 +69,7 @@ int main()
 	printf("find %lld\n", wxdl_hash_path(wxdl_state_get_global(state), "color.black", 0)->v.data.i);
 
 	char text[] =
-		u8"{size : @IF(true, 1, 2), data : color.black}";
+		u8"{size : @IF(true, @VAR('color.white'), @VAR('color.black')), data : color.black}";
 	printf("%s\n", text);
 
 
