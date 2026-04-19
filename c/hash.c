@@ -28,7 +28,6 @@ WXDLhash* wxdl_new_hash(WXDLu32 _table_size, WXDLstring_builder* _builder)
 	h->builder = _builder;
 	h->size = 0;
 	h->refcount = 1;
-
 	return h;
 }
 
@@ -113,6 +112,7 @@ void wxdl_hash_clear(WXDLhash* _hash)
 			n = n2;
 			size -= 1;
 		}
+		_hash->table[i] = NULL;
 	}
 }
 
@@ -120,7 +120,6 @@ void wxdl_free_hash(WXDLhash* _hash)
 {
 	if (_hash == NULL)
 		return;
-
 	_hash->refcount -= 1;
 
 	if (_hash->refcount == 0)
@@ -612,7 +611,7 @@ void wxdl_set_node_str_ref(WXDLhash_node* _n, WXDLstring* _v)
 		return;
 
 	wxdl_free_value(&_n->v);
-	WXDL_V_SET_STR(_n->v, _v);
+	WXDL_V_SET_STR(_n->v, wxdl_string_ref(_v));
 }
 
 void wxdl_set_node_hash(WXDLhash_node* _n, WXDLhash* _v)

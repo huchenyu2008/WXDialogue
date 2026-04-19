@@ -903,7 +903,7 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
                 // 这里是为了让报错指针指向函数名称位置
                 WXDLu64 lp = _loader->ptr;
                 _loader->ptr = xpos;
-                err = wxdl_call(call, _loader, pv);
+                err = wxdl_call_ext(call, _loader, pv, WXDL_TRUE);
                 _loader->ptr = lp;
                 wxdl_free_call(call, WXDL_TRUE);
             }
@@ -1056,6 +1056,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
             wxdl_copy(path, _loader->text + path_st, l); path[l] = 0;
 
             WXDL_V_SET_STR(*_v, wxdl_try_gen_build_string(_loader->builder, path));
+
             WXDLcall* c = wxdl_new_call(WXDL_FUNC_NAME_GET_GLOBAL_VAR, wxdl_state_get_func(_loader->state, WXDL_FUNC_NAME_GET_GLOBAL_VAR), _v, 1, _loader->builder);
             WXDL_V_SET_CALL(*_v, c);
         }
@@ -1145,7 +1146,6 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
     {
         _wxdl_loader_next(_loader);
         _wxdl_jump_space(_loader);
-
         WXDL_V_SET_NULL(*_v);
 
         err = _wxdl_parse_call(_loader, _v);

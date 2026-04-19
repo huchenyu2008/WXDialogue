@@ -204,7 +204,7 @@ WXDLvalue* wxdl_arr_insert_str_ref(WXDLarr* _arr, WXDLstring* _v, WXDLu64 _index
 {
 	wxdl_arr_insert_null(_arr, _index);
 	WXDLvalue* v = &_arr->data[_index];
-	WXDL_V_SET_STR(*v, _v);
+	WXDL_V_SET_STR(*v, wxdl_string_ref(_v));
 	return &_arr->data[_index];
 }
 
@@ -315,7 +315,7 @@ WXDLvalue* wxdl_arr_add_str_ref(WXDLarr* _arr, WXDLstring* _v)
 	_wxdl_arr_check_size(_arr, 1);
 
 	WXDLvalue* v = &_arr->data[_arr->size++];
-	WXDL_V_SET_STR(*v, _v);
+	WXDL_V_SET_STR(*v, wxdl_string_ref(_v));
 	return v;
 }
 

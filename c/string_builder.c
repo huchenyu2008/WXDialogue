@@ -104,7 +104,8 @@ void wxdl_free_string(WXDLstring* _str)
         //printf("count down %s %lld\n", _str->str, _str->refcount);
         if (_str->refcount < 1)
         {
-            wxdl_hash_sr_remove(_str->builder->hash, _str);
+            WXDLhash_node* n = wxdl_hash_sr_remove(_str->builder->hash, _str);
+            wxdl_free(n);
             wxdl_free(_str->str);
             wxdl_free(_str);
         }

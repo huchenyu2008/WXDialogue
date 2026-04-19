@@ -69,12 +69,12 @@ int main()
 	printf("find %lld\n", wxdl_hash_path(wxdl_state_get_global(state), "color.black", 0)->v.data.i);
 
 	char text[] =
-		u8"{size : @p1(@getvar('color.white'), [1, [1, 2]]), data : color.black}";
+		u8"{size : @IF(true, 1, 2), data : color.black}";
 	printf("%s\n", text);
 
 
 
-	WXDLblock* data = wxdl_parse_block(state, text, 0, WXDL_FALSE, log_buff, sizeof(log_buff) - 1, "current");
+	WXDLblock* data = wxdl_parse_block(state, text, 0, WXDL_TRUE, log_buff, sizeof(log_buff) - 1, "current");
 
 
 	printf("%d\n", 1111);
@@ -106,14 +106,18 @@ int main()
 		//tnode = tnode->next;
 	}*/
 
+	printf("start saver\n");
 	WXDLbuff_set* bs = wxdl_new_buff_set();
 	WXDLsaver* saver = wxdl_new_saver(data, NULL);
 
 	wxdl_saver_output(saver, bs);
+	printf("saver  yes\n");
 
 	printf("%s\n", wxdl_buff_get(wxdl_buff_set_at(bs, 0)));
-
 	wxdl_free_block(data);
 	wxdl_free_state(state);
+
+
+	printf("program end\n");
 	return 0;
 }

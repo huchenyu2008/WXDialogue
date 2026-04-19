@@ -23,8 +23,9 @@
 // 调用函数最大参数数量
 #define WXDL_FUNC_MAX_PARAM_COUNT 65534
 
-#define WXDL_FUNC_NAME_GET_GLOBAL_VAR "getvar"
+#define WXDL_FUNC_NAME_GET_GLOBAL_VAR "VAR"
 
+#define WXDL_FUNC_NAME_IF "IF"
 // 缓存大小
 #define WXDL_BUFF_SIZE 4096
 

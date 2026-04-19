@@ -91,10 +91,9 @@ WXDIALOGUE_API WXDLarr* wxdl_param_arr(struct WXDLloader* _loader, WXDLvalue* _v
 WXDIALOGUE_API WXDLcall* wxdl_param_call(struct WXDLloader* _loader, WXDLvalue* _v);
 
 WXDIALOGUE_API WXDLvalue* wxdl_param_value(struct WXDLloader* _loader, WXDLvalue* _v);
+
 // 确定参数类型
-// 返回出错位置(如果参数不足返回flag_size)
-// 产生为空返回(WXDLu32)-2，正确返回(WXDLu32)-1
-WXDIALOGUE_API WXDLu32 wxdl_param_check(const WXDLvalue* _argv, WXDLu32 _argc, const WXDLflag* flags, WXDLu32 flag_size);
+WXDIALOGUE_API WXDLbool wxdl_param_check(const WXDLvalue* _argv, WXDLu32 _argc, const WXDLflag* flags, WXDLu32 flag_size);
 
 
 #endif
