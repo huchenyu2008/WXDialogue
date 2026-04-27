@@ -1,6 +1,7 @@
 
 #include "parse.h"
 #include "define.h"
+#include "lib.h"
 #include "type_define.h"
 #include "hash.h"
 #include "state.h"
@@ -1067,7 +1068,9 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
 
             WXDL_V_SET_STR(*_v, wxdl_try_gen_build_string(_loader->builder, path));
 
-            WXDLfunction_info fi = wxdl_state_get_func(_loader->state, WXDL_FUNC_NAME_GET_GLOBAL_VAR);
+            WXDLfunction_info fi;
+            fi.func = _wxdl_lib_getvar;
+            fi.is_change_param = WXDL_TRUE;
             WXDLcall* c = wxdl_new_call(WXDL_FUNC_NAME_GET_GLOBAL_VAR, &fi, _v, 1, _loader->builder);
             WXDL_V_SET_CALL(*_v, c);
         }

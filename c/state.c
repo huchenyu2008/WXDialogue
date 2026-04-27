@@ -152,6 +152,7 @@ void wxdl_state_free_pid(WXDLstate* _state, WXDLu32 _pid)
 
 WXDLthread_resoucre* wxdl_state_pid(WXDLstate* _state, WXDLu32 _pid)
 {
+    if (_state == NULL) return NULL;
     if (_pid < _state->pid_max_size && _state->pres_uses[_pid] == WXDL_INVAILD_PID)
     {
         return &_state->pres[_pid];
@@ -161,6 +162,7 @@ WXDLthread_resoucre* wxdl_state_pid(WXDLstate* _state, WXDLu32 _pid)
 
 WXDLbool wxdl_state_pid_vaild(WXDLstate* _state, WXDLu32 _pid)
 {
+    if (_state == NULL) return WXDL_FALSE;
     if (_pid < _state->pid_max_size && _state->pres_uses[_pid] == WXDL_INVAILD_PID)
     {
         return WXDL_TRUE;

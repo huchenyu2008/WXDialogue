@@ -131,8 +131,8 @@ WXDLbuff* wxdl_buff_set_write(WXDLbuff_set* _buff, const WXDLchar* _text, WXDLu6
 WXDLbuff* wxdl_new_buff(WXDLu32 _buffsize)
 {
     WXDLbuff* b = (WXDLbuff*)wxdl_malloc(sizeof(WXDLbuff));
-    b->buff = (WXDLchar*)wxdl_malloc(_buffsize);
-    wxdl_set(b->buff, 0, _buffsize);
+    b->buff = (WXDLchar*)wxdl_malloc(_buffsize + 1);
+    wxdl_set(b->buff, 0, _buffsize + 1);
     b->can_write_size = _buffsize;
     b->buffsize = _buffsize;
     return b;
@@ -144,6 +144,12 @@ void wxdl_free_buff(WXDLbuff* _buff)
 
     wxdl_free(_buff->buff);
     wxdl_free(_buff);
+}
+
+WXDLu32 wxdl_buff_size(WXDLbuff* _buff)
+{
+    if (_buff == NULL) return NULL;
+    return  (_buff->buffsize - _buff->can_write_size);
 }
 
 WXDLchar* wxdl_buff_get(WXDLbuff* _buff)

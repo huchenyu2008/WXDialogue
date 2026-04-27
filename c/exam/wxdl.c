@@ -58,7 +58,7 @@ int main()
 	wxdl_state_set_logbuff(state, log_buff, sizeof(log_buff));
 	WXDLu32 pid = wxdl_state_new_pid(state);
 
-	WXDLblock* data = wxdl_parse_block(state, text, 0, WXDL_TRUE, "current", pid, wxdl_state_logbuff(state));
+	WXDLblock* data = wxdl_parse_block(NULL, text, 0, WXDL_FALSE, "current", WXDL_INVAILD_PID, wxdl_state_logbuff(state));
 
 
 	printf("err %d\n", data == NULL);
