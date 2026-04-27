@@ -31,14 +31,22 @@
 // 获取全局的字符串构建器
 WXDIALOGUE_API WXDLstring_builder* wxdl_get_global_builder();
 
+
 // 创建一个字符串构建器
 WXDIALOGUE_API WXDLstring_builder* wxdl_new_builder();
+
+WXDIALOGUE_API WXDLstring_builder* wxdl_builder_ref(WXDLstring_builder* _builder);
+
+WXDIALOGUE_API void wxdl_free_builder(WXDLstring_builder* _builder);
 
 // 获得一个字符串引用, 没有则创建
 WXDIALOGUE_API WXDLstring* wxdl_build_string(WXDLstring_builder* _sb, const WXDLchar* _str);
 
 // 用一个字符串对象创建字符串引用, 已经有了就删掉传进来的字符串
 WXDIALOGUE_API WXDLstring* wxdl_try_gen_build_string(WXDLstring_builder* _sb, WXDLchar* _str);
+
+// 用一个字符串对象创建字符串引用, 已经有了就删掉传进来的字符串
+WXDIALOGUE_API WXDLstring* wxdl_try_gen_build_string_with_hashcode(WXDLstring_builder* _sb, WXDLchar* _str, WXDLu64 hashcode);
 
 // 添加字符串引用计数
 WXDIALOGUE_API WXDLstring* wxdl_string_ref(WXDLstring* _str);

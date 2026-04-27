@@ -1,55 +1,12 @@
 
 #include "./log.h"
 #include "define.h"
+#include "type_define.h"
 #include "arr.h"
+#include "parse.h"
+#include "state.h"
 #include <stdio.h>
 
-
-typedef struct WXDLloader
-{
-	// 使用的状态机
-	WXDLstate* state;
-
-	// 解析文本
-	WXDLchar* text;
-	WXDLu64 text_size;
-
-	// 当前解析位置
-	WXDLu64 ptr;
-
-    // 当前行数
-    WXDLu64 line;
-
-    // 当前行数开始字节
-    WXDLu64 line_start;
-
-	// 日志输出缓存
-	WXDLchar* log_buff;
-	WXDLu64 log_buff_size;
-
-    // 当前日志长度
-    WXDLu64 log_len;
-
-    // 当前使用标签
-    WXDLhash* psign;
-
-    // 使用的本地签名表
-    WXDLarr* use_local_signs;
-
-    // 文件名称
-    const WXDLchar* where;
-
-    // 是否直接运行
-    WXDLbool is_running_call;
-
-    // 当前的call层数
-    WXDLu64 call_layer_count;
-
-    // 用户数据
-    WXDLptr userdata;
-
-    WXDLstring_builder* builder;
-}WXDLloader;
 
 WXDLint _wxdl_get_enter_pos(const WXDLchar* code, WXDLint line, WXDLint line_st)
 {
@@ -94,7 +51,9 @@ void _wxdl_limit_send(const WXDLchar* text, WXDLu64 line_st, int* off, int d, in
 
 void wxdl_log_error(WXDLloader* loader, const WXDLchar* where, const WXDLchar* text)
 {
-    if (loader->log_buff == NULL) return;
+    WXDLstate* state = wxdl_loader_state(loader);
+    WXDLlogbuff* lb = loader->logbuff;
+    if (lb == NULL || lb->logbuff == NULL) return;
 
 
     WXDLcall* c = (WXDLcall*)wxdl_loader_userdata(loader);
@@ -106,35 +65,45 @@ void wxdl_log_error(WXDLloader* loader, const WXDLchar* where, const WXDLchar* t
     _wxdl_limit_send(loader->text, loader->line_start, &off, d, x);
 
     if (c == NULL)
-        loader->log_len += (WXDLu64)snprintf(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "WXDL Error file %s, pos (%lld, %d):\n", where, loader->line, x);
+        lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "WXDL Error file %s, pos (%lld, %d):\n", where, loader->line, x);
     else
-        loader->log_len += (WXDLu64)snprintf(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "WXDL Error file %s, pos (%lld, %d), call '%s' :\n", where, loader->line, x, c->name->str);
-    loader->log_len += (WXDLu64)snprintf(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|    %.*s\n", d - off, loader->text + loader->line_start + (WXDLu64)off);
-    loader->log_len += (WXDLu64)snprintf(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|%*s~~~^\n", x - off, "");
-    loader->log_len += (WXDLu64)snprintf(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|error info : %s\n", text);
-    loader->log_buff[loader->log_len] = '\0';
+        lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "WXDL Error file %s, pos (%lld, %d), call '%s' :\n", where, loader->line, x, c->name->str);
+    lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "|    %.*s\n", d - off, loader->text + loader->line_start + (WXDLu64)off);
+    lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "|%*s~~~^\n", x - off, "");
+    lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "|error info : %s\n", text);
+    lb->logbuff[lb->bufflen] = '\0';
     return;
 }
 
-void wxdl_log_call_error(WXDLloader* loader, const WXDLchar* text)
+void wxdl_log_call_error(WXDLstate* state, WXDLcall* call, const WXDLchar* text, WXDLu32 pid)
 {
-    if (loader->log_buff == NULL) return;
+    WXDLlogbuff* lb = wxdl_state_logbuff(state);
+    if (lb == NULL) return;
 
-    WXDLcall* c = (WXDLcall*)wxdl_loader_userdata(loader);
-
-    if (loader->is_running_call && c == NULL)
-    {
-        wxdl_log_error(loader, loader->where, text);
-        return;
-    }
+    WXDLcall* c = call;
 
     if (c != NULL && c->where != NULL)
-        loader->log_len += (WXDLu64)snprintf(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "WXDL Call Error file %s, pos (%d, %d), call '%s' :\n", c->where->str, c->line, c->xpos, c->name->str);
+        lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "WXDL Call Error file %s, pos (%d, %d), call '%s' :\n", c->where->str, c->line, c->xpos, c->name->str);
     else
-        loader->log_len += (WXDLu64)snprintf(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "WXDL Call Error file unkown, pos (%d, %d), call '%s' :\n", c->line, c->xpos, c->name->str);
-    loader->log_len += (WXDLu64)snprintf(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|    Detailed error location is not exposed in call mode.\n");
-    loader->log_len += (WXDLu64)snprintf(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-    loader->log_len += (WXDLu64)snprintf(loader->log_buff + loader->log_len, loader->log_buff_size - loader->log_len, "|error info : %s\n", text);
+        lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "WXDL Call Error file unkown, pos (%d, %d), call '%s' :\n", c->line, c->xpos, c->name->str);
+    WXDLthread_resoucre* res = wxdl_state_pid(state, pid);
+
+    if (res != NULL)
+    {
+        int off = 0;
+        int d = (int)_wxdl_get_enter_pos(res->text, c->line, c->xpos_st);
+        int x = (int)(c->xpos);
+
+        _wxdl_limit_send(res->text, c->xpos_st, &off, d, x);
+        lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "|    %.*s\n", d - off, res->text + c->xpos_st + (WXDLu64)off);
+        lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "|%*s~~~^\n", x - off, "");
+    }
+    else
+    {
+        lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "|    Detailed error location is not exposed in call mode.\n");
+        lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "|    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+    }
+    lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "|error info : %s\n", text);
 }
 
 const char* wxdl_get_type_str(int flag)

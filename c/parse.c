@@ -1,6 +1,7 @@
 
 #include "parse.h"
 #include "define.h"
+#include "type_define.h"
 #include "hash.h"
 #include "state.h"
 #include "std.h"
@@ -12,79 +13,31 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct WXDLloader
-{
-	// 使用的状态机
-	WXDLstate* state;
-
-	// 解析文本
-	WXDLchar* text;
-	WXDLu64 text_size;
-
-	// 当前解析位置
-	WXDLu64 ptr;
-
-    // 当前行数
-    WXDLu64 line;
-
-    // 当前行数开始字节
-    WXDLu64 line_start;
-
-	// 日志输出缓存
-	WXDLchar* log_buff;
-	WXDLu64 log_buff_size;
-
-    // 当前日志长度
-    WXDLu64 log_len;
-
-    // 当前使用标签
-    WXDLhash* psign;
-
-    // 使用的本地签名表
-    WXDLarr* use_local_signs;
-
-    // 文件名称
-    const WXDLchar* where;
-
-    // 是否直接运行
-    WXDLbool is_running_call;
-
-    // 当前的call层数
-    WXDLu64 call_layer_count;
-
-    // 用户数据
-    WXDLptr userdata;
-
-    WXDLstring_builder* builder;
-}WXDLloader;
-
-typedef struct WXDLblock
-{
-    WXDLhash* data;
-    // data是否引用
-    WXDLbool is_ref;
-}WXDLblock;
 
 // function============================================================================
 
 // log======================================================
 
-#define _WXDL_OUT_LOG(ploader, str, ...) _loader->log_len += (_loader->log_len >= _loader->log_buff_size) ? 0 : (WXDLu64)snprintf(_loader->log_buff + _loader->log_len, _loader->log_buff_size - _loader->log_len, str, ##__VA_ARGS__)
+#define _WXDL_OUT_LOG(bl, str, ...) bl->bufflen += (bl->bufflen >= bl->buffsize) ? 0 : (WXDLu64)snprintf(bl->logbuff + bl->bufflen, bl->buffsize - bl->bufflen, str, ##__VA_ARGS__)
 
 // 日志输出当前解析位置
 void _wxdl_out_log_position(WXDLloader* _loader)
 {
-    if (_loader->log_len >= _loader->log_buff_size) return;
+    WXDLstate* state = wxdl_loader_state(_loader);
+    WXDLlogbuff* bl = wxdl_state_logbuff(state);
+    if (bl->bufflen >= bl->buffsize) return;
 
-    _WXDL_OUT_LOG(_loader, "(%lld, %lld)", _loader->line, _loader->ptr - _loader->line_start);
+    _WXDL_OUT_LOG(bl, "(%lld, %lld)", _loader->line, _loader->ptr - _loader->line_start);
 }
 
 //输出错误头
 void _wxdl_out_log_error_head(WXDLloader* _loader)
 {
-    if (_loader->log_len >= _loader->log_buff_size) return;
+    WXDLstate* state = wxdl_loader_state(_loader);
+    WXDLlogbuff* bl = wxdl_state_logbuff(state);
+    if (bl->bufflen >= bl->buffsize) return;
 
-    _WXDL_OUT_LOG(_loader, "wxdl error at (%lld, %lld) : ", _loader->line, _loader->ptr - _loader->line_start);
+    _WXDL_OUT_LOG(bl, "wxdl error at (%lld, %lld) : ", _loader->line, _loader->ptr - _loader->line_start);
 }
 
 
@@ -198,8 +151,8 @@ WXDLu64 _wxdl_text_next(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off, WXDL
             if (_nextline != NULL)
                 *_nextline += 1;
             if (_line_start != NULL)
-                *_line_start = *_off;
-            _off += m;
+                *_line_start = *_off + 1;
+            *_off += m;
             return m;
         }
 
@@ -419,6 +372,34 @@ char _wxdl_parse_esc_char(const char *str, size_t* index)
     }
 }
 
+char _wxdl_get_esc_char(const char *str, size_t index)
+{
+    switch (str[index + 1])
+    {
+    case 'n':
+        return '\n';
+
+    case 't':
+        return '\t';
+
+    case 'b':
+        return '\b';
+
+    case '\\':
+        return '\\';
+
+    case '"':
+        return '"';
+
+    case '\'':
+        return '\'';
+
+    case 'r':
+        return '\r';
+    }
+    return  0;
+}
+
 int _wxdl_check_esc_char(const char *str)
 {
     switch (str[1])
@@ -436,10 +417,13 @@ int _wxdl_check_esc_char(const char *str)
     }
 }
 
-WXDLerror _wxdl_text_parse_string(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off, WXDLu64* _nextline, WXDLu64* _line_start, WXDLchar endchar, WXDLchar** _pstr)
+WXDLerror _wxdl_text_parse_string(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off, WXDLu64* _nextline, WXDLu64* _line_start, WXDLchar endchar, WXDLchar** _pstr, WXDLu64* _hashcode)
 {
     WXDLu64 str_start = *_off;
     WXDLu64 len = 0;
+
+    if (_hashcode) *_hashcode = 0;
+
     for (; _text[*_off] != 0;)
     {
         if (_text[*_off] == endchar)
@@ -465,8 +449,15 @@ WXDLerror _wxdl_text_parse_string(const WXDLchar* _text, WXDLu64 _len, WXDLu64* 
         if (_text[*_off] == '\\')
         {
             if (_wxdl_check_esc_char(_text + *_off))
+            {
+                if (_hashcode) *_hashcode = *_hashcode * 131 + _wxdl_get_esc_char(_text, *_off);
                 _wxdl_text_next(_text, _len, _off, _nextline, _line_start);
+            }
+            else
+                if (_hashcode) *_hashcode = *_hashcode * 131 + _text[*_off];
         }
+        else
+            if (_hashcode) *_hashcode = *_hashcode * 131 + _text[*_off];
         len += _wxdl_text_next(_text, _len, _off, _nextline, _line_start);
     }
 
@@ -476,13 +467,13 @@ WXDLerror _wxdl_text_parse_string(const WXDLchar* _text, WXDLu64 _len, WXDLu64* 
 
 // 解析字符串
 // 注 要跳过开头的endchar再调用
-WXDLerror _wxdl_parse_string(WXDLloader* _loader, WXDLchar endchar, WXDLchar** _pstr)
+WXDLerror _wxdl_parse_string(WXDLloader* _loader, WXDLchar endchar, WXDLchar** _pstr, WXDLu64* _hashcode)
 {
-    return _wxdl_text_parse_string(_loader->text, _loader->text_size, &_loader->ptr, &_loader->line, &_loader->line_start, endchar, _pstr);
+    return _wxdl_text_parse_string(_loader->text, _loader->text_size, &_loader->ptr, &_loader->line, &_loader->line_start, endchar, _pstr, _hashcode);
 }
 
 // 解析id
-WXDLerror _wxdl_text_parse_id(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off, WXDLu64* _nextline, WXDLu64* _line_start, WXDLchar** _pstr)
+WXDLerror _wxdl_text_parse_id(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off, WXDLu64* _nextline, WXDLu64* _line_start, WXDLchar** _pstr, WXDLu64* _hashcode)
 {
     WXDLu64 str_start = *_off;
 
@@ -491,6 +482,8 @@ WXDLerror _wxdl_text_parse_id(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off
     {
         return 1;
     }
+
+    if (_hashcode) *_hashcode = 0;
 
     for (; _text[*_off] != 0;)
     {
@@ -512,6 +505,8 @@ _WXDL_PARSE_ID_END_MAKE_GOTO:
             }
             return 0;
         }
+
+        if (_hashcode) *_hashcode = *_hashcode * 131 + _text[*_off];
         _wxdl_text_next(_text, _len, _off, _nextline, _line_start);
     }
 
@@ -519,29 +514,29 @@ _WXDL_PARSE_ID_END_MAKE_GOTO:
 }
 
 // 解析id
-WXDLerror _wxdl_parse_id(WXDLloader* _loader, WXDLchar** _pstr)
+WXDLerror _wxdl_parse_id(WXDLloader* _loader, WXDLchar** _pstr, WXDLu64* _hashcode)
 {
-    return _wxdl_text_parse_id(_loader->text, _loader->text_size, &_loader->ptr, &_loader->line, &_loader->line_start, _pstr);
+    return _wxdl_text_parse_id(_loader->text, _loader->text_size, &_loader->ptr, &_loader->line, &_loader->line_start, _pstr, _hashcode);
 }
 
 // 解析id或str, endchar为0为id, 不然为str
-WXDLerror _wxdl_text_parse_name_and_id(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off, WXDLu64* _nextline, WXDLu64* _line_start, WXDLchar endchar, WXDLchar** _pstr)
+WXDLerror _wxdl_text_parse_name_and_id(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off, WXDLu64* _nextline, WXDLu64* _line_start, WXDLchar endchar, WXDLchar** _pstr, WXDLu64* _hashcode)
 {
     if (endchar != '\'' && endchar != '"')
     {
-        return _wxdl_text_parse_id(_text, _len, _off, _nextline, _line_start, _pstr);
+        return _wxdl_text_parse_id(_text, _len, _off, _nextline, _line_start, _pstr, _hashcode);
     }
     else
     {
         _wxdl_text_next(_text, _len, _off, _nextline, _line_start);
-        return _wxdl_text_parse_string(_text, _len, _off, _nextline, _line_start, endchar, _pstr);
+        return _wxdl_text_parse_string(_text, _len, _off, _nextline, _line_start, endchar, _pstr, _hashcode);
     }
 }
 
 // 解析id或str, endchar为0为id, 不然为str
-WXDLerror _wxdl_parse_name_and_id(WXDLloader* _loader, WXDLchar endchar, WXDLchar** _pstr)
+WXDLerror _wxdl_parse_name_and_id(WXDLloader* _loader, WXDLchar endchar, WXDLchar** _pstr, WXDLu64* _hashcode)
 {
-    return _wxdl_text_parse_name_and_id(_loader->text, _loader->text_size, &_loader->ptr, &_loader->line, &_loader->line_start, endchar, _pstr);
+    return _wxdl_text_parse_name_and_id(_loader->text, _loader->text_size, &_loader->ptr, &_loader->line, &_loader->line_start, endchar, _pstr, _hashcode);
 }
 
 // 解析数组
@@ -586,7 +581,7 @@ WXDLerror _wxdl_parse_arr(WXDLloader* _loader, WXDLarr* _arr)
 
 // 迭代文本路径
 // 返回是否结束
-WXDLerror _wxdl_text_parse_path(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off, WXDLu64* _nextline, WXDLu64* _line_start, WXDLbool* _wait_spilt, WXDLchar** _path, WXDLbool* _is_end)
+WXDLerror _wxdl_text_parse_path(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off, WXDLu64* _nextline, WXDLu64* _line_start, WXDLbool* _wait_spilt, WXDLchar** _path, WXDLu64* _hashcode, WXDLbool* _is_end)
 {
     _wxdl_text_jump_space(_text, _len, _off, _nextline, _line_start);
     WXDLchar c = _text[*_off];
@@ -605,7 +600,7 @@ WXDLerror _wxdl_text_parse_path(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _o
                 return 1;
             }
             *_wait_spilt = WXDL_TRUE;
-            return _wxdl_text_parse_name_and_id(_text, _len, _off, _nextline, _line_start, c, _path);
+            return _wxdl_text_parse_name_and_id(_text, _len, _off, _nextline, _line_start, c, _path, _hashcode);
         }
         else
         {
@@ -618,9 +613,9 @@ WXDLerror _wxdl_text_parse_path(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _o
     return 0;
 }
 
-WXDLerror _wxdl_parse_path(WXDLloader* _loader, WXDLbool* wait_spilt, WXDLchar** _path, WXDLbool* _is_end)
+WXDLerror _wxdl_parse_path(WXDLloader* _loader, WXDLbool* wait_spilt, WXDLchar** _path, WXDLu64* _hashcode, WXDLbool* _is_end)
 {
-    return _wxdl_text_parse_path(_loader->text, _loader->text_size, &_loader->ptr, &_loader->line, &_loader->line_start, wait_spilt, _path, _is_end);
+    return _wxdl_text_parse_path(_loader->text, _loader->text_size, &_loader->ptr, &_loader->line, &_loader->line_start, wait_spilt, _path, _hashcode, _is_end);
 }
 
 // 加载hash路径
@@ -660,10 +655,11 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
             }
 
             WXDLchar* str = NULL;
-            err = _wxdl_parse_name_and_id(_loader, *pc, &str);
+            WXDLu64 hc = 0;
+            err = _wxdl_parse_name_and_id(_loader, *pc, &str, &hc);
             if (err)
             {
-                WXDL_LOG_WRITE(_loader, _loader->where, "Invalid path node name.");
+                WXDL_LOG_WRITE(_loader, _loader->where->str, "Invalid path node name.");
                 return err;
             }
             // 检查路径, 如果启用路径检查
@@ -675,18 +671,18 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                 // 难不成还是想在数字里找东西
                 if ((WXDLu64)find_dic == 1)
                 {
-                    WXDL_LOG_WRITE(_loader, _loader->where, "The node type in the path is not a table.");
+                    WXDL_LOG_WRITE(_loader, _loader->where->str, "The node type in the path is not a table.");
                     wxdl_free(str);
                     return 1;
                 }
 
                 if (find_dic != NULL)
                 {
-                    n = wxdl_hash_find(find_dic, str);
+                    n = _wxdl_hash_find_with_hashcode(find_dic, str, hc);
                 }
                 else
                 {
-                    n = wxdl_hash_find(_check_hash, str);
+                    n = _wxdl_hash_find_with_hashcode(_check_hash, str, hc);
                     // 没找到到其它检查表找
                     if (_ext_check_hashs != NULL)
                     {
@@ -694,7 +690,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                         {
                             WXDLhash* h = wxdl_arr_at(_ext_check_hashs, i)->data.d;
 
-                            n = wxdl_hash_find(h, str);
+                            n = _wxdl_hash_find_with_hashcode(h, str, hc);
                         }
                     }
                 }
@@ -702,7 +698,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                 // 判断标记
                 if (n == NULL)
                 {
-                    WXDL_LOG_WRITE(_loader, _loader->where, "Invalid path cannot locate the target node. Please check if the path is correct.");
+                    WXDL_LOG_WRITE(_loader, _loader->where->str, "Invalid path cannot locate the target node. Please check if the path is correct.");
                     wxdl_free(str);
                     return 1;
                 }
@@ -722,7 +718,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
             // 获取数据
             if (v == NULL)
             {
-                node = wxdl_hash_find(_hash, str);
+                node = _wxdl_hash_find_with_hashcode(_hash, str, hc);
                 if (node == NULL)
                 {
                     // 判断是否支持补全
@@ -730,7 +726,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                         node = wxdl_hash_add_null(_hash, str);
                     else
                     {
-                        WXDL_LOG_WRITE(_loader, _loader->where, "Failed to fetch data correctly.");
+                        WXDL_LOG_WRITE(_loader, _loader->where->str, "Failed to fetch data correctly.");
                         wxdl_free(str);
                         return 1;
                     }
@@ -745,7 +741,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                     wxdl_free_value(v);
                     WXDL_V_SET_DIC(*v, wxdl_new_hash(16, _loader->builder));
                 }
-                node = wxdl_hash_find(v->data.d, str);
+                node = _wxdl_hash_find_with_hashcode(v->data.d, str, hc);
                 // 没找到就自己加
                 // 为什么呢? 因为前面有类型检查emmmm, 所以能保证有这个字典或数据
                 if (node == NULL)
@@ -755,7 +751,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                         node = wxdl_hash_add_null(v->data.d, str);
                     else
                     {
-                        WXDL_LOG_WRITE(_loader, _loader->where, "Failed to fetch data correctly.");
+                        WXDL_LOG_WRITE(_loader, _loader->where->str, "Failed to fetch data correctly.");
                         wxdl_free(str);
                         return 1;
                     }
@@ -784,7 +780,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
     //if (_check)
     //    if ((WXDLu64)find_dic != 1 && !(_hash == _check_hash && _ext_check_hashs == NULL))
     //    {
-    //        WXDL_LOG_WRITE(_loader, _loader->where, "In check mode, table get/set is not allowed. Try adding '!' to the path.");
+    //        WXDL_LOG_WRITE(_loader, _loader->where->str, "In check mode, table get/set is not allowed. Try adding '!' to the path.");
     //        return 1;
     //    }
     if (v == NULL) return 1;
@@ -859,18 +855,20 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
         endchar = head;
 
     WXDLchar* id;
-    WXDLerror err = _wxdl_parse_name_and_id(_loader, endchar, &id);
+    WXDLu64 hc = 0;
+    WXDLerror err = _wxdl_parse_name_and_id(_loader, endchar, &id, &hc);
+
     if (err)
     {
-        WXDL_LOG_WRITE(_loader, _loader->where, "Invalid function name format");
+        WXDL_LOG_WRITE(_loader, _loader->where->str, "Invalid function name format");
         return 1;
     }
 
-    WXDLfunction func = wxdl_state_get_func(_loader->state, id);
-    if (func == NULL)
+    WXDLfunction_info func = wxdl_state_get_func(_loader->state, id);
+    if (func.func == NULL)
     {
         wxdl_free(id);
-        WXDL_LOG_WRITE(_loader, _loader->where, "Unable to find a function called '%s'", id);
+        WXDL_LOG_WRITE(_loader, _loader->where->str, "Unable to find a function called '%s'", id);
         return 1;
     }
 
@@ -878,16 +876,17 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
     if (_loader->text[_loader->ptr] != '(')
     {
         wxdl_free(id);
-        WXDL_LOG_WRITE(_loader, _loader->where, "Invalid function call format, parameters must be wrapped with '()'");
+        WXDL_LOG_WRITE(_loader, _loader->where->str, "Invalid function call format, parameters must be wrapped with '()'");
         return 1;
     }
     _wxdl_loader_next(_loader);
 
 
-    WXDLcall* call = wxdl_new_call(id, func, NULL, 0, _loader->builder);
+    WXDLcall* call = wxdl_new_call(id, &func, NULL, 0, _loader->builder);
     call->line = (WXDLu32)_loader->line;
     call->xpos = (WXDLu32)(_loader->ptr - xpos);
-    call->where = wxdl_build_string(_loader->builder, _loader->where);
+    call->xpos_st = (WXDLu32)(xpos);
+    call->where = wxdl_string_ref(_loader->where);
     WXDLbool wait = WXDL_FALSE;
     WXDLchar c = 0;
     for (; !_wxdl_loader_eof(_loader);)
@@ -903,15 +902,12 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
                 // 这里是为了让报错指针指向函数名称位置
                 WXDLu64 lp = _loader->ptr;
                 _loader->ptr = xpos;
-                err = wxdl_call_ext(call, _loader, pv, WXDL_TRUE);
+                err = wxdl_call_ext(call, _loader->state, pv, _loader->pid, WXDL_TRUE);
                 _loader->ptr = lp;
-                wxdl_free_call(call, WXDL_TRUE);
+                wxdl_free_call(call);
             }
             else
             {
-                call->line = (WXDLu32)_loader->line;
-                call->xpos = (WXDLu32)(_loader->ptr - xpos);
-                call->where = wxdl_build_string(_loader->builder, _loader->where);
                 WXDL_V_SET_CALL(*pv, call);
             }
             wxdl_free(id);
@@ -926,16 +922,16 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
         {
             if (call->argc >= WXDL_FUNC_MAX_PARAM_COUNT)
             {
-                wxdl_free_call(call, WXDL_TRUE);
+                wxdl_free_call(call);
                 wxdl_free(id);
-                WXDL_LOG_WRITE(_loader, _loader->where, "Parameter count exceeds supported limit (argc > WXDL_FUNC_MAX_PARAM_COUNT)");
+                WXDL_LOG_WRITE(_loader, _loader->where->str, "Parameter count exceeds supported limit (argc > WXDL_FUNC_MAX_PARAM_COUNT)");
                 return 1;
             }
             else if (wait == WXDL_TRUE)
             {
-                wxdl_free_call(call, WXDL_TRUE);
+                wxdl_free_call(call);
                 wxdl_free(id);
-                WXDL_LOG_WRITE(_loader, _loader->where, "Missing separator ',' between function call parameters");
+                WXDL_LOG_WRITE(_loader, _loader->where->str, "Missing separator ',' between function call parameters");
                 return 1;
             }
 
@@ -944,7 +940,7 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
             _loader->call_layer_count -= 1;
             if (err)
             {
-                wxdl_free_call(call, WXDL_TRUE);
+                wxdl_free_call(call);
                 wxdl_free(id);
                 return 1;
             }
@@ -954,8 +950,8 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
         }
     }
 
-    wxdl_free_call(call, WXDL_TRUE);
-    WXDL_LOG_WRITE(_loader, _loader->where, "Parse function error, you seem to be missing a terminator");
+    wxdl_free_call(call);
+    WXDL_LOG_WRITE(_loader, _loader->where->str, "Parse function error, you seem to be missing a terminator");
 
     wxdl_free(id);
     return 1;
@@ -980,7 +976,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         if (_check_node != NULL)
             if (!wxdl_is_type_convert(_check_node->v.type, WXDL_TYPE_FLOAT))
             {
-                WXDL_LOG_WRITE(_loader, _loader->where, "Unable to convert from type '%s' to type '%s'", "number", wxdl_get_type_str(_check_node->v.type));
+                WXDL_LOG_WRITE(_loader, _loader->where->str, "Unable to convert from type '%s' to type '%s'", "number", wxdl_get_type_str(_check_node->v.type));
                 return 1;
             }
 
@@ -990,7 +986,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         err = _wxdl_parse_number(_loader, &i, &f, &t);
         if (err)
         {
-            WXDL_LOG_WRITE(_loader, _loader->where, "Failed to parse number");
+            WXDL_LOG_WRITE(_loader, _loader->where->str, "Failed to parse number");
             return err;
         }
 
@@ -1030,7 +1026,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
             if (_check_node != NULL)
                 if (!wxdl_is_type_convert(_check_node->v.type, pv->type))
                 {
-                    WXDL_LOG_WRITE(_loader, _loader->where, "Unable to convert from type '%s' to type '%s'", wxdl_get_type_str(pv->type), wxdl_get_type_str(_check_node->v.type));
+                    WXDL_LOG_WRITE(_loader, _loader->where->str, "Unable to convert from type '%s' to type '%s'", wxdl_get_type_str(pv->type), wxdl_get_type_str(_check_node->v.type));
                     return 1;
                 }
 
@@ -1042,7 +1038,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
             path_st = _loader->ptr;
             while (!end)
             {
-                err = _wxdl_parse_path(_loader, &wait, NULL, &end);
+                err = _wxdl_parse_path(_loader, &wait, NULL, NULL, &end);
                 if (err)
                 {
                     return err;
@@ -1052,12 +1048,27 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
             }
 
             WXDLu64 l = path_ed - path_st;
+
+            // 特殊状况如布尔值, null
+            if (l == 4)
+            {
+                WXDLint32* i1 = (WXDLint32*)(_loader->text + path_st);
+                if (*i1 == *(WXDLint32*)"null") {WXDL_V_SET_NULL(*_v); return 0;}
+                else if (*i1 == *(WXDLint32*)"true") {WXDL_V_SET_BOOL(*_v, WXDL_TRUE); return 0;}
+            }
+            else if (l == 5)
+            {
+                WXDLint32* i1 = (WXDLint32*)(_loader->text + path_st);
+                if (*i1 == *(WXDLint32*)"fals" && _loader->text[path_st + 4] == 'e') {WXDL_V_SET_BOOL(*_v, WXDL_FALSE); return 0;}
+            }
+
             path = wxdl_malloc(sizeof(WXDLchar) * (l + 1));
             wxdl_copy(path, _loader->text + path_st, l); path[l] = 0;
 
             WXDL_V_SET_STR(*_v, wxdl_try_gen_build_string(_loader->builder, path));
 
-            WXDLcall* c = wxdl_new_call(WXDL_FUNC_NAME_GET_GLOBAL_VAR, wxdl_state_get_func(_loader->state, WXDL_FUNC_NAME_GET_GLOBAL_VAR), _v, 1, _loader->builder);
+            WXDLfunction_info fi = wxdl_state_get_func(_loader->state, WXDL_FUNC_NAME_GET_GLOBAL_VAR);
+            WXDLcall* c = wxdl_new_call(WXDL_FUNC_NAME_GET_GLOBAL_VAR, &fi, _v, 1, _loader->builder);
             WXDL_V_SET_CALL(*_v, c);
         }
     }
@@ -1066,28 +1077,28 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         if (_check_node != NULL)
             if (!wxdl_is_type_convert(_check_node->v.type, WXDL_TYPE_STR))
             {
-                WXDL_LOG_WRITE(_loader, _loader->where, "Unable to convert from type '%s' to type '%s'", "string", wxdl_get_type_str(_check_node->v.type));
+                WXDL_LOG_WRITE(_loader, _loader->where->str, "Unable to convert from type '%s' to type '%s'", "string", wxdl_get_type_str(_check_node->v.type));
                 return 1;
             }
 
         WXDLchar* str = NULL;
-
+        WXDLu64 hc = 0;
         _wxdl_loader_next(_loader);
-        err = _wxdl_parse_string(_loader, head, &str);
+        err = _wxdl_parse_string(_loader, head, &str, &hc);
         if (err)
         {
             wxdl_free(str);
             return err;
         }
 
-        WXDL_V_SET_STR(*_v, wxdl_try_gen_build_string(_loader->builder, str));
+        WXDL_V_SET_STR(*_v, wxdl_try_gen_build_string_with_hashcode(_loader->builder, str, hc));
     }
     else if (head == '[')
     {
         if (_check_node != NULL)
             if (!wxdl_is_type_convert(_check_node->v.type, WXDL_TYPE_ARR))
             {
-                WXDL_LOG_WRITE(_loader, _loader->where, "Unable to convert from type '%s' to type '%s'", "array", wxdl_get_type_str(_check_node->v.type));
+                WXDL_LOG_WRITE(_loader, _loader->where->str, "Unable to convert from type '%s' to type '%s'", "array", wxdl_get_type_str(_check_node->v.type));
                 return 1;
             }
 
@@ -1110,7 +1121,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         if (_check_node != NULL)
             if (!wxdl_is_type_convert(_check_node->v.type, WXDL_TYPE_DIC))
             {
-                WXDL_LOG_WRITE(_loader, _loader->where, "Unable to convert from type '%s' to type '%s'", "table", wxdl_get_type_str(_check_node->v.type));
+                WXDL_LOG_WRITE(_loader, _loader->where->str, "Unable to convert from type '%s' to type '%s'", "table", wxdl_get_type_str(_check_node->v.type));
                 return 1;
             }
 
@@ -1184,7 +1195,7 @@ WXDLerror _wxdl_parse_block(WXDLloader* loader, WXDLtext* text, WXDLhash* dic, W
 
             if (is_spilt)
             {
-                WXDL_LOG_WRITE(loader, loader->where, "Missing separator or incorrect ID format.");
+                WXDL_LOG_WRITE(loader, loader->where->str, "Missing separator or incorrect ID format.");
                 return 1;
             }
 
@@ -1256,7 +1267,7 @@ WXDLerror _wxdl_parse_block(WXDLloader* loader, WXDLtext* text, WXDLhash* dic, W
     // 判断是否是正常退出
     if (!is_break)
     {
-        WXDL_LOG_WRITE(loader, loader->where, "Abnormal scope exit. Did you forget the scope terminator?");
+        WXDL_LOG_WRITE(loader, loader->where->str, "Abnormal scope exit. Did you forget the scope terminator?");
         return 1;
     }
     else
@@ -1334,10 +1345,10 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
                 _wxdl_jump_space(loader);
             }
 
-            err = _wxdl_parse_name_and_id(loader, loader->text[loader->ptr], &sign);
+            err = _wxdl_parse_name_and_id(loader, loader->text[loader->ptr], &sign, NULL);
             if (err)
             {
-                WXDL_LOG_WRITE(loader, loader->where, "Invalid global signature table name");
+                WXDL_LOG_WRITE(loader, loader->where->str, "Invalid global signature table name");
                 wxdl_free_text(text);
                 return NULL;
             }
@@ -1365,7 +1376,7 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
                     // 找到对象必须为表
                     if (err || v->type != WXDL_TYPE_DIC)
                     {
-                        WXDL_LOG_WRITE(loader, loader->where, "Invalid local signature table setting");
+                        WXDL_LOG_WRITE(loader, loader->where->str, "Invalid local signature table setting");
                         wxdl_free_text(text);
                         wxdl_free(sign);
                         wxdl_free_arr(use_local);
@@ -1414,7 +1425,7 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
             }
             else
             {
-                WXDL_LOG_WRITE(loader, loader->where, "A block wrapped in '{}' is expected after the signature. Alternatively, did you mean to use '$$'?");
+                WXDL_LOG_WRITE(loader, loader->where->str, "A block wrapped in '{}' is expected after the signature. Alternatively, did you mean to use '$$'?");
                 wxdl_free(sign);
                 wxdl_free_arr(use_local);
                 wxdl_free_text(text);
@@ -1458,18 +1469,22 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
 }
 
 
-WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, WXDLchar* _log_buff, WXDLu64 _log_max_size, const WXDLchar* _where)
+WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, const WXDLchar* _where, WXDLu32 _pid, WXDLlogbuff* _logbuff)
 {
     if (_state == NULL || _text == NULL)
         return NULL;
 
     WXDLloader loader = {0};
 
+    // 用于恢复pid内容
+    WXDLchar* ltext = NULL;
+    WXDLu64 ltext_size = 0;
+
     loader.state = _state;
     loader.is_running_call = WXDL_TRUE;
-    loader.where = _where;
+    loader.where = wxdl_build_string(loader.builder, _where);
     if (loader.where == NULL)
-        loader.where = "unknown";
+        loader.where = wxdl_build_string(loader.builder, "unknown");
 
     loader.text = _text;
     if (_text_size != 0)
@@ -1481,32 +1496,51 @@ WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, WXD
     loader.line = 1;
     loader.line_start = 0;
 
-    loader.log_buff = _log_buff;
-    loader.log_buff_size = _log_max_size;
-    loader.log_len = 0;
+    loader.logbuff = _logbuff;
 
     loader.call_layer_count = 0;
     loader.use_local_signs = wxdl_new_arr(8, loader.builder);
 
+    if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVAILD_PID;
+    loader.pid = _pid;
+
+    WXDLthread_resoucre* rs = wxdl_state_pid(loader.state, loader.pid);
+    if (rs != NULL)
+    {
+        ltext = rs->text;
+        ltext_size = rs->text_size;
+        rs->text = _text;
+        rs->text_size = _text_size;
+    }
+
     WXDLtext* t = _wxdl_parse(&loader);
 
+    if (rs != NULL)
+    {
+        rs->text = ltext;
+        rs->text_size = ltext_size;
+    }
     wxdl_free_arr(loader.use_local_signs);
     return t;
 }
 
-WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, WXDLbool func_running, WXDLchar* _log_buff, WXDLu64 _log_max_size, const WXDLchar* _where)
+WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, WXDLbool func_running, const WXDLchar* _where, WXDLu32 _pid, WXDLlogbuff* _logbuff)
 {
     if (_state == NULL || _text == NULL)
         return NULL;
 
-    WXDLloader loader;
+    WXDLloader loader = {0};
+
+    // 用于恢复pid内容
+    WXDLchar* ltext = NULL;
+    WXDLu64 ltext_size = 0;
 
     loader.state = _state;
     loader.builder = wxdl_state_get_string_builder(_state);
     loader.is_running_call = func_running;
-    loader.where = _where;
+    loader.where = wxdl_build_string(loader.builder, _where);
     if (loader.where == NULL)
-        loader.where = "unknown";
+        loader.where = wxdl_build_string(loader.builder, "unknown");
 
     loader.text = _text;
     if (_text_size != 0)
@@ -1518,12 +1552,21 @@ WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_si
     loader.line = 1;
     loader.line_start = 0;
 
-    loader.log_buff = _log_buff;
-    loader.log_buff_size = _log_max_size;
-    loader.log_len = 0;
+    loader.logbuff = _logbuff;
 
     loader.call_layer_count = 0;
-    loader.use_local_signs = wxdl_new_arr(8, loader.builder);
+
+    if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVAILD_PID;
+    loader.pid = _pid;
+
+    WXDLthread_resoucre* rs = wxdl_state_pid(loader.state, loader.pid);
+    if (rs != NULL)
+    {
+        ltext = rs->text;
+        ltext_size = rs->text_size;
+        rs->text = _text;
+        rs->text_size = _text_size;
+    }
 
     WXDLblock* bl = NULL;
     for (; !_wxdl_loader_eof(&loader);)
@@ -1540,35 +1583,40 @@ WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_si
             if (err)
             {
                 wxdl_free_block(bl);
-                return NULL;
+                goto _WXDL_BLOCK_PARSE_ERROR_GOTO;
             }
+
+            if (rs != NULL)
+            {
+                rs->text = ltext;
+                rs->text_size = ltext_size;
+            }
+
+            wxdl_free_string(loader.where);
             return bl;
         }
         else
         {
-             WXDL_LOG_WRITE(&loader, loader.where, "A block wrapped in '{}' is expected after the signature.");
-             return NULL;
+             WXDL_LOG_WRITE(&loader, loader.where->str, "A block wrapped in '{}' is expected after the signature.");
+             goto _WXDL_BLOCK_PARSE_ERROR_GOTO;
         }
     }
+_WXDL_BLOCK_PARSE_ERROR_GOTO:
 
+    if (rs != NULL)
+    {
+        rs->text = ltext;
+        rs->text_size = ltext_size;
+    }
+    wxdl_free_string(loader.where);
     return NULL;
 }
 
-WXDLhash* wxdl_block_running(WXDLstate* _state, WXDLblock* _block, WXDLchar* _log_buff, WXDLu64 _log_max_size)
+WXDLhash* wxdl_block_running(WXDLstate* _state, WXDLblock* _block, WXDLu32 _pid)
 {
+    if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVAILD_PID;
 
-
-    WXDLloader loader;
-    loader.state = _state;
-    loader.builder = wxdl_state_get_string_builder(_state);
-    loader.line = 0;
-    loader.line_start = 0;
-    loader.log_buff = _log_buff;
-    loader.log_buff_size = _log_max_size;
-    loader.log_len = 0;
-    loader.where = NULL;
-    loader.call_layer_count = 0;
-    return wxdl_hash_copy_running(_block->data, &loader);
+    return wxdl_hash_copy_running(_block->data, _state, _pid);
 }
 
 WXDLblock* wxdl_new_block(WXDLhash* _refhash, WXDLstring_builder* _builder)
@@ -1585,6 +1633,14 @@ WXDLblock* wxdl_new_block(WXDLhash* _refhash, WXDLstring_builder* _builder)
         b->is_ref = WXDL_TRUE;
     }
     return b;
+}
+
+WXDLhash* wxdl_block_set_data(WXDLblock* _block, WXDLhash* _refhash)
+{
+    if (_block == NULL || _refhash == NULL) return NULL;
+    wxdl_free_hash(_block->data);
+    _block->data = wxdl_hash_ref(_refhash);
+    return _block->data;
 }
 
 WXDLhash* wxdl_block_data(WXDLblock* _block)
@@ -1610,11 +1666,12 @@ WXDLhash_node* wxdl_hash_path(WXDLhash* _hash, const WXDLchar* _path, WXDLu64 _l
     WXDLbool is_end = WXDL_FALSE;
     WXDLhash_node* n = NULL;
     WXDLerror err = 0;
+    WXDLu64 hc = 0;
     if (_len == 0) _len = wxdl_str_len(_path);
 
     while (!is_end)
     {
-        err = _wxdl_text_parse_path(_path, _len, &off, NULL, NULL, &wait, &path, &is_end);
+        err = _wxdl_text_parse_path(_path, _len, &off, NULL, NULL, &wait, &path, &hc, &is_end);
         if (err)
         {
             return NULL;

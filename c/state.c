@@ -1,56 +1,70 @@
 
 #include "state.h"
+#include "define.h"
+#include "type_define.h"
 #include "hash.h"
 #include "arr.h"
 #include "std.h"
 #include "string_builder.h"
+#include <string.h>
 
-typedef struct WXDLstate
-{
-	// 全局数据
-	// 用于代替数据别名
-	// 比如 : color.black 数值为 0x000000
-	WXDLhash* global;
-
-	// 签名表(用于核对签名是否有误)
-	WXDLhash* signs;
-
-	// 非全局签名表
-	// 使用要声明(用于支持一些非全局标签的类型检查使用)
-	WXDLhash* local_signs;
-
-	// 全部函数
-	WXDLhash* funcs;
-
-	// 文本的节点
-	// 注意, 每次解析都会将其释放掉
-	// 如果需要长期使用, 请调用函数获得托管权
-	WXDLtext_node* texts;
-
-	WXDLtext_node* end_text;
-
-	WXDLstring_builder* builder;
-}WXDLstate;
-
-typedef struct WXDLtext
-{
-	WXDLtext_node* texts;
-	WXDLtext_node* end_text;
-
-
-	WXDLu64 size;
-}WXDLtext;
+#define WXDL_STATE_PID_EXT_FATOR 1.5f
 
 // function===========================================================
+
+
+// 初始化pid资源
+void _wxdl_state_pid_init(WXDLthread_resoucre* tr)
+{
+    memset(tr, 0, sizeof(WXDLthread_resoucre));
+}
+
+// 释放pid资源(就是把里面的资源释放, 不是把tr放了)
+void _wxdl_state_pid_free(WXDLthread_resoucre* tr)
+{
+    wxdl_free_value_arr(tr->R, WXDL_REG_SIZE);
+    memset(tr, 0, sizeof(WXDLthread_resoucre));
+}
+
+// 扩容pid资源
+void _wxdl_state_pid_ext(WXDLstate* _state)
+{
+    WXDLu32 new_size = (WXDLu32)(_state->pid_max_size * WXDL_STATE_PID_EXT_FATOR);
+    WXDLu32 msize = _state->pid_max_size;
+    if (new_size == 0) new_size = 4;
+    _state->pres_fisrt_use = msize;
+    wxdl_c_arr_ext((void**)&_state->pres, _state->pid_size, &_state->pid_max_size, new_size, sizeof(WXDLthread_resoucre));
+    _state->pid_max_size = msize;
+    wxdl_c_arr_ext((void**)&_state->pres_uses, _state->pid_size, &_state->pid_max_size, new_size, sizeof(WXDLu32));
+
+    // 初始化pid
+    for (WXDLu32 i = msize; i < new_size; i++)
+    {
+        _wxdl_state_pid_init(_state->pres + i);
+        _state->pres_uses[i] = i + 1;
+    }
+}
+
 WXDLstate* wxdl_new_state(WXDLstring_builder* _builder)
 {
 	WXDLstate* s = wxdl_malloc(sizeof(WXDLstate));
 	if (_builder == NULL) _builder = wxdl_get_global_builder();
-	s->builder = _builder;
+	s->builder = wxdl_builder_ref(_builder);
 	s->global = wxdl_new_hash(32, _builder);
 	s->signs = wxdl_new_hash(32, _builder);
 	s->local_signs = wxdl_new_hash(32, _builder);
 	s->funcs = wxdl_new_hash(32, _builder);
+
+	s->logbuff.logbuff = NULL;
+	s->logbuff.buffsize = 0;
+	s->logbuff.bufflen = 0;
+
+	s->pres = NULL;
+	s->pres_uses = NULL;
+	s->pres_fisrt_use = 0;
+	s->pid_max_size = 0;
+	s->pid_size = 0;
+	_wxdl_state_pid_ext(s);
 
 	// 添加全局变量
 	wxdl_hash_add_null(s->global, "null");
@@ -67,12 +81,91 @@ void wxdl_free_state(WXDLstate* _state)
 	if (_state == NULL)
 		return;
 
+	for (WXDLu32 i = 0; i < _state->pid_max_size; i++)
+        _wxdl_state_pid_free(_state->pres + i);
+	wxdl_free(_state->pres);
+	wxdl_free(_state->pres_uses);
+
 	wxdl_free_hash(_state->global);
 	wxdl_free_hash(_state->signs);
 	wxdl_free_hash(_state->local_signs);
 	wxdl_free_hash(_state->funcs);
 
 	wxdl_free(_state);
+}
+
+WXDLlogbuff* wxdl_state_set_logbuff(WXDLstate* _state, WXDLchar* _logbuff, WXDLu64 _buffsize)
+{
+    if (_state == NULL) return NULL;
+    _state->logbuff.logbuff = _logbuff;
+    _state->logbuff.buffsize = _buffsize;
+    _state->logbuff.bufflen = 0;
+    return  &_state->logbuff;
+}
+
+WXDLlogbuff* wxdl_state_logbuff(WXDLstate* _state)
+{
+    if (_state == NULL) return NULL;
+    return &_state->logbuff;
+}
+
+WXDLlogbuff* wxdl_state_clear_logbuff(WXDLstate* _state)
+{
+    if (_state == NULL) return NULL;
+    _state->logbuff.bufflen = 0;
+    return &_state->logbuff;
+}
+
+WXDLu32 wxdl_state_new_pid(WXDLstate* _state)
+{
+    if (_state == NULL) return WXDL_INVAILD_PID;
+
+    // 无可用pid, 扩容pid池
+    if (_state->pres_fisrt_use >= _state->pid_max_size)
+    {
+        _wxdl_state_pid_ext(_state);
+    }
+
+    WXDLu32 pid = _state->pres_fisrt_use;
+    _state->pres_fisrt_use = _state->pres_uses[pid];
+    _state->pres_uses[pid] = WXDL_INVAILD_PID;
+    _state->pid_size += 1;
+
+    return pid;
+}
+
+void wxdl_state_free_pid(WXDLstate* _state, WXDLu32 _pid)
+{
+    if (_state == NULL) return;
+
+    if (_pid < _state->pid_max_size)
+    {
+        if (_state->pres_uses[_pid] == WXDL_INVAILD_PID)
+        {
+            _wxdl_state_pid_free(_state->pres + _pid);
+            _state->pres_uses[_pid] = _state->pres_uses[_state->pres_fisrt_use];
+            _state->pres_fisrt_use = _pid;
+            _state->pid_size -= 1;
+        }
+    }
+}
+
+WXDLthread_resoucre* wxdl_state_pid(WXDLstate* _state, WXDLu32 _pid)
+{
+    if (_pid < _state->pid_max_size && _state->pres_uses[_pid] == WXDL_INVAILD_PID)
+    {
+        return &_state->pres[_pid];
+    }
+    return NULL;
+}
+
+WXDLbool wxdl_state_pid_vaild(WXDLstate* _state, WXDLu32 _pid)
+{
+    if (_pid < _state->pid_max_size && _state->pres_uses[_pid] == WXDL_INVAILD_PID)
+    {
+        return WXDL_TRUE;
+    }
+    return WXDL_FALSE;
 }
 
 WXDLhash* wxdl_state_gen_sign_table(WXDLstate* _state)
@@ -211,23 +304,25 @@ WXDLhash* wxdl_state_get_global(WXDLstate* _state)
 	return _state->global;
 }
 
-WXDLhash_node* wxdl_state_add_func(WXDLstate* _state, const WXDLchar* _name, WXDLfunction func)
+WXDLhash_node* wxdl_state_add_func(WXDLstate* _state, const WXDLchar* _name, WXDLfunction func, WXDLbool _is_change_param)
 {
 	if (_state == NULL)
 		return NULL;
 
-	return wxdl_hash_add_ptr(_state->funcs, _name, func);
+	WXDLhash_node* n = wxdl_hash_add_ptr(_state->funcs, _name, func);
+	n->v.flag |= WXDL_FLAG_FUNC_NOT_SET_PARAM;
+	return n;
 }
 
-WXDLfunction wxdl_state_get_func(WXDLstate* _state, const WXDLchar* _name)
+WXDLfunction_info wxdl_state_get_func(WXDLstate* _state, const WXDLchar* _name)
 {
 	if (_state == NULL)
-		return NULL;
+		return (WXDLfunction_info){.func = NULL};
 
 	WXDLhash_node* n = wxdl_hash_find(_state->funcs, _name);
 	if (n == NULL)
-        return NULL;
-	return (WXDLfunction)n->v.data.p;
+        return (WXDLfunction_info){.func = NULL};
+	return (WXDLfunction_info){.func = (WXDLfunction)n->v.data.p, .is_change_param = ((WXDL_NODE_FLAG(n) & WXDL_FLAG_FUNC_NOT_SET_PARAM) == WXDL_FLAG_FUNC_NOT_SET_PARAM)};
 }
 
 WXDLhash* wxdl_state_get_func_table(WXDLstate* _state)

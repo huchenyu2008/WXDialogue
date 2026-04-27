@@ -3,23 +3,6 @@
 #include "./define.h"
 #include "iterator.h"
 
-
-typedef struct WXDLhash_node
-{
-	WXDLstring* k;
-	WXDLvalue v;
-	struct WXDLhash_node* next;
-}WXDLhash_node;
-
-typedef struct WXDLhash
-{
-	WXDLstring_builder* builder;
-	WXDLhash_node** table;
-	WXDLu32 table_size;
-	WXDLu32 size;
-	WXDLu64 refcount;
-}WXDLhash;
-
 #define WXDL_NODE_NEXT(n) n->next
 
 #define WXDL_NODE_KEY(n) n->k
@@ -48,14 +31,24 @@ typedef struct WXDLhash
 
 #define WXDL_NODE_DIC(n) n->v.data.d
 
+#define WXDL_NODE_CALL(n) n->v.data.c
 // 创建字典
 WXDIALOGUE_API WXDLhash* wxdl_new_hash(WXDLu32 _table_size, WXDLstring_builder* _builder);
 
 WXDIALOGUE_API WXDLhash* wxdl_hash_ref(WXDLhash* _hash);
 
+// 将字典上锁
+WXDIALOGUE_API void wxdl_hash_lock(WXDLhash* _hash);
+
+// 将字典解锁
+WXDIALOGUE_API void wxdl_hash_unlock(WXDLhash* _hash);
+
 // 拷贝字典
 // _loader为NULL时, 不会运行call元素
-WXDIALOGUE_API WXDLhash* wxdl_hash_copy_running(WXDLhash* _hash, struct WXDLloader* _loader);
+// _pid 是通过wxdl_state_new_pid获取, 保证多线程安全操作的
+// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVAILD_PID
+// 用寄存器的话就加, 因为寄存器在pid的资源里
+WXDIALOGUE_API WXDLhash* wxdl_hash_copy_running(WXDLhash* _hash, struct WXDLstate* _state, WXDLu32 _pid);
 
 // 拷贝字典
 WXDIALOGUE_API WXDLhash* wxdl_hash_copy(WXDLhash* _hash);
@@ -63,12 +56,25 @@ WXDIALOGUE_API WXDLhash* wxdl_hash_copy(WXDLhash* _hash);
 // 清空字典
 WXDIALOGUE_API void wxdl_hash_clear(WXDLhash* _hash);
 
+// 清空字典(string_builder用)
+WXDIALOGUE_API  void wxdl_hash_string_ext(WXDLhash* _hash, WXDLbool _free_kv);
+
 // 销毁字典
 WXDIALOGUE_API void wxdl_free_hash(WXDLhash* _hash);
 
-// 获取字典数据
+// 获取字典数据（带着hashcode, 不安全用于优化）
+WXDIALOGUE_API WXDLhash_node* _wxdl_hash_find_with_hashcode(WXDLhash* _hash, const WXDLchar* _key, WXDLu64 _hashcode);
+// 获取字典数据（相比于wxdl_hash_sr_find慢很多）
 WXDIALOGUE_API WXDLhash_node* wxdl_hash_find(WXDLhash* _hash, const WXDLchar* _key);
+// 获取字典数据（使用字符串引用查找，更快）
 WXDIALOGUE_API WXDLhash_node* wxdl_hash_sr_find(WXDLhash* _hash, const WXDLstring* _key);
+
+// 获取字典数据（带着hashcode, 不安全用于优化，不上锁）
+WXDIALOGUE_API WXDLhash_node* _wxdl_hash_unsafe_find_with_hashcode(WXDLhash* _hash, const WXDLchar* _key, WXDLu64 _hashcode);
+// 获取字典数据（相比于wxdl_hash_sr_find慢很多，不上锁）
+WXDIALOGUE_API WXDLhash_node* wxdl_hash_unsafe_find(WXDLhash* _hash, const WXDLchar* _key);
+// 获取字典数据（使用字符串引用查找，更快，不上锁）
+WXDIALOGUE_API WXDLhash_node* wxdl_hash_unsfae_sr_find(WXDLhash* _hash, const WXDLstring* _key);
 
 // 获取字典元素数量
 WXDIALOGUE_API WXDLu64 wxdl_hash_size(WXDLhash* _hash);
@@ -94,6 +100,8 @@ WXDIALOGUE_API WXDLhash_node* wxdl_hash_add_str_ref(WXDLhash* _hash, const WXDLc
 WXDIALOGUE_API WXDLhash_node* wxdl_hash_add_hash(WXDLhash* _hash, const WXDLchar* _key, struct WXDLhash* _v);
 
 WXDIALOGUE_API WXDLhash_node* wxdl_hash_add_arr(WXDLhash* _hash, const WXDLchar* _key, struct WXDLarr* _v);
+
+WXDIALOGUE_API WXDLhash_node* wxdl_hash_add_call(WXDLhash* _hash, const WXDLchar* _key, struct WXDLcall* _v);
 
 WXDIALOGUE_API WXDLhash_node* wxdl_hash_add_ptr(WXDLhash* _hash, const WXDLchar* _key, WXDLptr _v);
 
@@ -138,6 +146,8 @@ WXDIALOGUE_API void wxdl_set_node_str_ref(WXDLhash_node* _n, WXDLstring* _v);
 WXDIALOGUE_API void wxdl_set_node_hash(WXDLhash_node* _n, struct WXDLhash* _v);
 
 WXDIALOGUE_API void wxdl_set_node_arr(WXDLhash_node* _n, struct WXDLarr* _v);
+
+WXDIALOGUE_API void wxdl_set_node_call(WXDLhash_node* _n, WXDLcall* _v);
 
 WXDIALOGUE_API void wxdl_set_node_ptr(WXDLhash_node* _n, WXDLptr _v);
 

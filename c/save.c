@@ -218,7 +218,6 @@ WXDLu64 _wxdl_saver_out_hash(WXDLsaver* _saver, WXDLhash* _v, WXDLu64 _deep)
 
     s += _wxdl_saver_out_tab(_saver, _deep);
     wxdl_buff_set_write_chr(_saver->buff, '}');
-    s += _wxdl_saver_out_enter(_saver);
 
     return s;
 }

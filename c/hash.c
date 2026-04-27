@@ -1,5 +1,7 @@
 
 #include "define.h"
+#include "iterator.h"
+#include "type_define.h"
 #include "std.h"
 #include "hash.h"
 #include "arr.h"
@@ -25,9 +27,11 @@ WXDLhash* wxdl_new_hash(WXDLu32 _table_size, WXDLstring_builder* _builder)
 	wxdl_set(h->table, 0, sizeof(WXDLhash_node*) * _table_size);
 	h->table_size = _table_size;
 	if (_builder == NULL) _builder = wxdl_get_global_builder();
-	h->builder = _builder;
+	h->builder = wxdl_builder_ref(_builder);
 	h->size = 0;
 	h->refcount = 1;
+	h->lock = 0;
+	h->lockthread = 0;
 	return h;
 }
 
@@ -41,79 +45,92 @@ WXDLhash* wxdl_hash_ref(WXDLhash* _hash)
 	return _hash;
 }
 
-WXDLhash* wxdl_hash_copy_running(WXDLhash* _hash, struct WXDLloader* _loader)
+void wxdl_hash_lock(WXDLhash* _hash)
+{
+    WXDLu32 tid = wxdl_get_thread_id();
+    for (;_hash->lock != 0 && _hash->lockthread != tid;)
+    {
+        CPU_PAUSE();
+    };
+    _hash->lock += 1;
+    _hash->lockthread = tid;
+}
+
+void wxdl_hash_unlock(WXDLhash* _hash)
+{
+    if (_hash->lock != 0)
+        _hash->lock -= 1;
+}
+
+WXDLhash* wxdl_hash_copy_running(WXDLhash* _hash, struct WXDLstate* _state, WXDLu32 _pid)
 {
 	// 复制所有值到对象
     if (_hash == NULL)
 		return NULL;
 
+    wxdl_hash_lock(_hash);
 	WXDLhash* h = wxdl_new_hash(_hash->table_size, _hash->builder);
-	WXDLu64 count = _hash->size;
-	h->size = _hash->size;
-	for (WXDLu64 i = 0; count > 0; i++)
-	{
-		WXDLhash_node* n1 = _hash->table[i], *ln = NULL, *n;
 
+	WXDLiterator* ite = wxdl_hash_ite(_hash);
 
-		while (n1 != NULL)
+	do {
+        WXDLvalue* v = wxdl_iterator_get(ite);
+	    if (v != NULL)
 		{
-			n = wxdl_new_node();
-			n->k = wxdl_string_ref(n1->k);
-			n->next = NULL;
+		    WXDLhash_node* n = wxdl_hash_add_null(h, wxdl_hash_ite_key(ite)->str);
 
-            // 函数调用的的画就调用, 获取其返回值
-            if (_loader != NULL && WXDL_NODE_TYPE(n1) == WXDL_TYPE_CALL)
-            {
-			WXDLptr lp = wxdl_loader_userdata(_loader);
-				wxdl_set_loader_userdata(_loader, WXDL_V_CALL(n1->v));
-                wxdl_call(WXDL_V_CALL(n1->v), _loader, &n->v);
-				wxdl_set_loader_userdata(_loader, lp);
-            }
-            else
-			    wxdl_value_copy(&n->v, &n1->v);
-
-			// 判断是否为头节点
-			if (ln == NULL)
+			if (_state != NULL && WXDL_V_TYPE(*v) == WXDL_TYPE_CALL)
 			{
-				h->table[i] = n;
+			    wxdl_call(WXDL_V_CALL(*v), _state, &n->v, _pid);
 			}
 			else
 			{
-				ln->next = n;
+			    wxdl_value_copy(&n->v, v);
 			}
 
-			ln = n;
-			n1 = WXDL_NODE_NEXT(n1);
-			count -= 1;
+
 		}
-	}
+	}while (wxdl_iterator_next(ite));
+
+	wxdl_hash_unlock(_hash);
 
 	return h;
 }
 
 WXDLhash* wxdl_hash_copy(WXDLhash* _hash)
 {
-	return wxdl_hash_copy_running(_hash, NULL);
+	return wxdl_hash_copy_running(_hash, NULL, WXDL_INVAILD_PID);
 }
 
 void wxdl_hash_clear(WXDLhash* _hash)
 {
-	if (_hash == NULL)
+    wxdl_hash_string_ext(_hash, WXDL_TRUE);
+}
+
+void wxdl_hash_string_ext(WXDLhash* _hash, WXDLbool _free_kv)
+{
+    if (_hash == NULL)
 		return;
 
+	wxdl_hash_lock(_hash);
 	WXDLu64 size = _hash->size;
-	for (int i = 0; size > 0; i++)
+	for (WXDLu64 i = 0; size > 0; i++)
 	{
 		WXDLhash_node* n = _hash->table[i], * n2;
 		for (; n != NULL;)
 		{
 			n2 = WXDL_NODE_NEXT(n);
-			wxdl_free_node(n);
+			if (_free_kv)
+			    wxdl_free_node(n);
+			else
+			    wxdl_free(n);
 			n = n2;
 			size -= 1;
 		}
 		_hash->table[i] = NULL;
 	}
+	_hash->size = 0;
+	wxdl_hash_unlock(_hash);
 }
 
 void wxdl_free_hash(WXDLhash* _hash)
@@ -133,14 +150,33 @@ void wxdl_free_hash(WXDLhash* _hash)
 
 }
 
+WXDLhash_node* _wxdl_hash_find_with_hashcode(WXDLhash* _hash, const WXDLchar* _key, WXDLu64 _hashcode)
+{
+    wxdl_hash_lock(_hash);
+    WXDLhash_node* n = _wxdl_hash_unsafe_find_with_hashcode(_hash, _key, _hashcode);
+    wxdl_hash_unlock(_hash);
+    return n;
+}
+
 WXDLhash_node* wxdl_hash_find(WXDLhash* _hash, const WXDLchar* _key)
 {
-	if (_hash == NULL || _key == NULL)
+    return _wxdl_hash_find_with_hashcode(_hash, _key, wxdl_str_hashcode(_key));
+}
+
+WXDLhash_node* wxdl_hash_sr_find(WXDLhash* _hash, const WXDLstring* _key)
+{
+    wxdl_hash_lock(_hash);
+    WXDLhash_node* n = wxdl_hash_unsfae_sr_find(_hash, _key);
+    wxdl_hash_unlock(_hash);
+    return n;
+}
+
+WXDLhash_node* _wxdl_hash_unsafe_find_with_hashcode(WXDLhash* _hash, const WXDLchar* _key, WXDLu64 _hashcode)
+{
+    if (_hash == NULL || _key == NULL)
 		return NULL;
 
-
-
-	WXDLu64 code = wxdl_str_hashcode(_key) % _hash->table_size;
+	WXDLu64 code = _hashcode % _hash->table_size;
 
 	WXDLhash_node* n = _hash->table[code];
 	while (n != NULL)
@@ -154,7 +190,12 @@ WXDLhash_node* wxdl_hash_find(WXDLhash* _hash, const WXDLchar* _key)
 	return NULL;
 }
 
-WXDLhash_node* wxdl_hash_sr_find(WXDLhash* _hash, const WXDLstring* _key)
+WXDLhash_node* wxdl_hash_unsafe_find(WXDLhash* _hash, const WXDLchar* _key)
+{
+    return _wxdl_hash_unsafe_find_with_hashcode(_hash, _key, wxdl_str_hashcode(_key));
+}
+
+WXDLhash_node* wxdl_hash_unsfae_sr_find(WXDLhash* _hash, const WXDLstring* _key)
 {
 	if (_hash == NULL || _key == NULL)
 		return NULL;
@@ -208,7 +249,7 @@ void _wxdl_hash_ext(WXDLhash* _hash, WXDLu64 _new_size)
 		while (n != NULL)
 		{
 			WXDLhash_node* n2 = WXDL_NODE_NEXT(n);
-
+			WXDL_NODE_NEXT(n) = NULL;
 			_wxdl_hash_add_last_node(_hash, n);
 			n = n2;
 			j -= 1;
@@ -238,6 +279,7 @@ WXDLhash_node* _wxdl_builder_hash_add(WXDLhash* _hash, WXDLchar* _str, WXDLu64 _
 {
 	if (_hash == NULL || _str == NULL)
 		return NULL;
+	wxdl_hash_lock(_hash);
 	_wxdl_hash_check_size(_hash, 1);
 
 	WXDLu64 code = _hc % _hash->table_size;
@@ -277,12 +319,14 @@ WXDLhash_node* _wxdl_builder_hash_add(WXDLhash* _hash, WXDLchar* _str, WXDLu64 _
 		n->k = str;
 		WXDL_NODE_STR_REF(n) = str;
 		_hash->size += 1;
+		wxdl_hash_unlock(_hash);
 		return n;
 	}
 	else
 	{
 		if (_is_create)
 			wxdl_free(_str);
+		wxdl_hash_unlock(_hash);
 		return *pn;
 	}
 }
@@ -291,6 +335,7 @@ WXDLhash_node* wxdl_hash_add_null(WXDLhash* _hash, const WXDLchar* _key)
 {
 	if (_hash == NULL || _key == NULL)
 		return NULL;
+	wxdl_hash_lock(_hash);
 	_wxdl_hash_check_size(_hash, 1);
 
 	WXDLu64 code = wxdl_str_hashcode(_key) % _hash->table_size;
@@ -317,11 +362,13 @@ WXDLhash_node* wxdl_hash_add_null(WXDLhash* _hash, const WXDLchar* _key)
 			*pn = n;
 		n->k = wxdl_build_string(_hash->builder, _key);
 		_hash->size += 1;
+		wxdl_hash_unlock(_hash);
 		return n;
 	}
 	else
 	{
 		wxdl_set_node_null(*pn);
+		wxdl_hash_unlock(_hash);
 		return *pn;
 	}
 }
@@ -406,6 +453,16 @@ WXDLhash_node* wxdl_hash_add_arr(WXDLhash* _hash, const WXDLchar* _key, struct W
 	return n;
 }
 
+WXDLhash_node* wxdl_hash_add_call(WXDLhash* _hash, const WXDLchar* _key, struct WXDLcall* _v)
+{
+    if (_hash == NULL || _key == NULL)
+		return NULL;
+	WXDLhash_node* n = wxdl_hash_add_null(_hash, _key);
+	wxdl_set_node_call(n, _v);
+
+	return n;
+}
+
 WXDLhash_node* wxdl_hash_add_ptr(WXDLhash* _hash, const WXDLchar* _key, WXDLptr _v)
 {
 	if (_hash == NULL || _key == NULL)
@@ -440,6 +497,8 @@ void wxdl_hash_set_has_data(WXDLhash* _h1, WXDLhash* _h2)
 {
 	if (_h1 == NULL || _h2 == NULL)
 		return;
+	wxdl_hash_lock(_h1);
+	wxdl_hash_lock(_h2);
 
 	WXDLu64 size = _h2->size;
 	for (WXDLu64 i = 0; size > 0; i++)
@@ -468,6 +527,8 @@ void wxdl_hash_set_has_data(WXDLhash* _h1, WXDLhash* _h2)
 		}
 
 	}
+	wxdl_hash_unlock(_h2);
+	wxdl_hash_unlock(_h1);
 }
 
 WXDLhash_node* wxdl_hash_remove(WXDLhash* _hash, const WXDLchar* _key)
@@ -475,6 +536,7 @@ WXDLhash_node* wxdl_hash_remove(WXDLhash* _hash, const WXDLchar* _key)
 	if (_hash == NULL || _key == NULL)
 		return NULL;
 
+	wxdl_hash_lock(_hash);
 
 	WXDLu64 code = wxdl_str_hashcode(_key) % _hash->table_size;
 
@@ -485,13 +547,17 @@ WXDLhash_node* wxdl_hash_remove(WXDLhash* _hash, const WXDLchar* _key)
 		{
 			if (ln != NULL)
 				WXDL_NODE_NEXT(ln) = WXDL_NODE_NEXT(n);
+			else
+				_hash->table[code] = NULL;
 			_hash->size -= 1;
+			wxdl_hash_unlock(_hash);
 			return n;
 		}
 
 		ln = n;
 		n = WXDL_NODE_NEXT(n);
 	}
+	wxdl_hash_unlock(_hash);
 	return NULL;
 }
 
@@ -501,6 +567,7 @@ WXDLhash_node* wxdl_hash_sr_remove(WXDLhash* _hash, const WXDLstring* _key)
 		return NULL;
 
 
+	wxdl_hash_lock(_hash);
 	WXDLu64 code = _key->hashcode % _hash->table_size;
 
 	WXDLhash_node* n = _hash->table[code], *ln = NULL;
@@ -510,13 +577,17 @@ WXDLhash_node* wxdl_hash_sr_remove(WXDLhash* _hash, const WXDLstring* _key)
 		{
 			if (ln != NULL)
 				WXDL_NODE_NEXT(ln) = WXDL_NODE_NEXT(n);
+			else
+				_hash->table[code] = NULL;
 			_hash->size -= 1;
+			wxdl_hash_unlock(_hash);
 			return n;
 		}
 
 		ln = n;
 		n = WXDL_NODE_NEXT(n);
 	}
+	wxdl_hash_unlock(_hash);
 	return NULL;
 }
 
@@ -551,6 +622,7 @@ void wxdl_free_node(WXDLhash_node* _n)
 	wxdl_free_value(&_n->v);
 	wxdl_free(_n);
 }
+
 
 void wxdl_set_node_null(WXDLhash_node* _n)
 {
@@ -632,6 +704,15 @@ void wxdl_set_node_arr(WXDLhash_node* _n, WXDLarr* _v)
 	WXDL_V_SET_ARR(_n->v, wxdl_arr_ref(_v));
 }
 
+void wxdl_set_node_call(WXDLhash_node* _n, WXDLcall* _v)
+{
+    if (_n == NULL)
+		return;
+
+	wxdl_free_value(&_n->v);
+	WXDL_V_SET_CALL(_n->v, wxdl_call_ref(_v));
+}
+
 void wxdl_set_node_ptr(WXDLhash_node* _n, WXDLptr _v)
 {
 	if (_n == NULL)
@@ -668,17 +749,22 @@ void wxdl_move_node_v(WXDLhash_node* _n, WXDLvalue* _v)
 WXDLbool _wxdl_hash_ite_next(WXDLiterator* _ite)
 {
 	WXDLhash* hash = (WXDLhash*)_ite->data;
-	if ((WXDLu64)_ite->user1 >= hash->size) return WXDL_FALSE;
+	if ((WXDLu64)_ite->user1 >= hash->size)
+	{
+	    _ite->_v0 = NULL;
+		_ite->_v1 = NULL;
+        return WXDL_FALSE;
+    }
 	else
 	{
 
+	    wxdl_hash_lock(hash);
 		WXDLhash_node* n = (WXDLhash_node*)_ite->user3;
 
 		// 先尝试查找节点next
 		if (n != NULL && n->next != NULL)
 			n = WXDL_NODE_NEXT(n);
 		else n = NULL;
-
 		if (n == NULL)
 		{
 			for (WXDLu64 i = (WXDLu64)_ite->user2; i < hash->table_size; i++)
@@ -705,6 +791,7 @@ WXDLbool _wxdl_hash_ite_next(WXDLiterator* _ite)
 			_ite->v_count = 2;
 		}
 
+		wxdl_hash_unlock(hash);
 		return WXDL_TRUE;
 	}
 }
@@ -717,7 +804,7 @@ WXDLbool _wxdl_hash_ite_last(WXDLiterator* _ite)
 WXDLvalue* _wxdl_hash_ite_get(WXDLiterator* _ite)
 {
 	WXDLhash* hash = (WXDLhash*)_ite->data;
-	if (hash->size == 0) return NULL;
+	if (hash->size == 0 || (WXDLu64)_ite->user1 > hash->size) return NULL;
 	else return (WXDLvalue*)_ite->_v0;
 }
 
