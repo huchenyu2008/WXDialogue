@@ -64,7 +64,7 @@
 #define WXDL_REG_SIZE 8
 
 // 无效的PID
-#define WXDL_INVAILD_PID ((WXDLu32)-1)
+#define WXDL_INVALID_PID ((WXDLu32)-1)
 
 
 #if defined(_MSC_VER)

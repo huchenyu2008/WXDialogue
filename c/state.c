@@ -118,7 +118,7 @@ WXDLlogbuff* wxdl_state_clear_logbuff(WXDLstate* _state)
 
 WXDLu32 wxdl_state_new_pid(WXDLstate* _state)
 {
-    if (_state == NULL) return WXDL_INVAILD_PID;
+    if (_state == NULL) return WXDL_INVALID_PID;
 
     // 无可用pid, 扩容pid池
     if (_state->pres_fisrt_use >= _state->pid_max_size)
@@ -128,7 +128,7 @@ WXDLu32 wxdl_state_new_pid(WXDLstate* _state)
 
     WXDLu32 pid = _state->pres_fisrt_use;
     _state->pres_fisrt_use = _state->pres_uses[pid];
-    _state->pres_uses[pid] = WXDL_INVAILD_PID;
+    _state->pres_uses[pid] = WXDL_INVALID_PID;
     _state->pid_size += 1;
     _state->pres[pid].pid = pid;
 
@@ -141,7 +141,7 @@ void wxdl_state_free_pid(WXDLstate* _state, WXDLu32 _pid)
 
     if (_pid < _state->pid_max_size)
     {
-        if (_state->pres_uses[_pid] == WXDL_INVAILD_PID)
+        if (_state->pres_uses[_pid] == WXDL_INVALID_PID)
         {
             _wxdl_state_pid_free(_state->pres + _pid);
             _state->pres_uses[_pid] = _state->pres_uses[_state->pres_fisrt_use];
@@ -154,7 +154,7 @@ void wxdl_state_free_pid(WXDLstate* _state, WXDLu32 _pid)
 WXDLthread_resoucre* wxdl_state_pid(WXDLstate* _state, WXDLu32 _pid)
 {
     if (_state == NULL) return NULL;
-    if (_pid < _state->pid_max_size && _state->pres_uses[_pid] == WXDL_INVAILD_PID)
+    if (_pid < _state->pid_max_size && _state->pres_uses[_pid] == WXDL_INVALID_PID)
     {
         return &_state->pres[_pid];
     }
@@ -164,7 +164,7 @@ WXDLthread_resoucre* wxdl_state_pid(WXDLstate* _state, WXDLu32 _pid)
 WXDLbool wxdl_state_pid_vaild(WXDLstate* _state, WXDLu32 _pid)
 {
     if (_state == NULL) return WXDL_FALSE;
-    if (_pid < _state->pid_max_size && _state->pres_uses[_pid] == WXDL_INVAILD_PID)
+    if (_pid < _state->pid_max_size && _state->pres_uses[_pid] == WXDL_INVALID_PID)
     {
         return WXDL_TRUE;
     }

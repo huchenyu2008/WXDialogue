@@ -60,7 +60,7 @@ int main()
 	WXDLu32 pid = wxdl_state_new_pid(state);
 
 	clock_t c1 = clock();
-	WXDLblock* data = wxdl_parse_block(state, text, 0, WXDL_TRUE, "current", WXDL_INVAILD_PID, wxdl_state_logbuff(state));
+	WXDLblock* data = wxdl_parse_block(state, text, 0, WXDL_TRUE, "current", WXDL_INVALID_PID, wxdl_state_logbuff(state));
 
 	clock_t c2 = clock();
 

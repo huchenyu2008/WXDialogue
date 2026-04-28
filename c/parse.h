@@ -10,7 +10,7 @@
 // 解析文本
 // _text_size 为0时会自动计算长度g
 // _pid 是通过wxdl_state_new_pid获取, 保证多线程安全操作的
-// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVAILD_PID
+// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVALID_PID
 // 用寄存器的话就加, 因为寄存器在pid的资源里
 WXDIALOGUE_API WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, const WXDLchar* _where, WXDLu32 _pid, WXDLlogbuff* _logbuff);
 
@@ -20,14 +20,14 @@ WXDIALOGUE_API WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 
 // 解析块(用于另类的格式文件)
 // func_running 是是否里面运行内嵌的函数
 // _pid 是通过wxdl_state_new_pid获取, 保证多线程安全操作的
-// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVAILD_PID
+// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVALID_PID
 // 用寄存器的话就加, 因为寄存器在pid的资源里
 WXDIALOGUE_API WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, WXDLbool _func_running, const WXDLchar* _where, WXDLu32 _pid, WXDLlogbuff* _logbuff);
 
 // 运行块(复制块中的表, 并将运行数据写入)
 // 这个在wxdl_parse_block的func_running为WXDL_FALSE才会有用
 // _pid 是通过wxdl_state_new_pid获取, 保证多线程安全操作的
-// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVAILD_PID
+// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVALID_PID
 // 用寄存器的话就加, 因为寄存器在pid的资源里
 WXDIALOGUE_API WXDLhash* wxdl_block_running(WXDLstate* _state, WXDLblock* _block, WXDLu32 _pid);
 

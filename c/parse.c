@@ -1503,7 +1503,7 @@ WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, con
     loader.call_layer_count = 0;
     loader.use_local_signs = wxdl_new_arr(8, loader.builder);
 
-    if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVAILD_PID;
+    if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVALID_PID;
     loader.pid = _pid;
 
     loader.pres = wxdl_state_pid(loader.state, loader.pid);
@@ -1562,7 +1562,7 @@ WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_si
 
     loader.call_layer_count = 0;
 
-    if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVAILD_PID;
+    if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVALID_PID;
     loader.pid = _pid;
 
     loader.pres = wxdl_state_pid(loader.state, loader.pid);
@@ -1629,7 +1629,7 @@ _WXDL_BLOCK_PARSE_ERROR_GOTO:
 
 WXDLhash* wxdl_block_running(WXDLstate* _state, WXDLblock* _block, WXDLu32 _pid)
 {
-    if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVAILD_PID;
+    if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVALID_PID;
 
     WXDLthread_resoucre* pres = wxdl_state_pid(_state, _pid);
     return wxdl_hash_copy_running(_block->data, _state, pres);

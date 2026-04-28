@@ -65,7 +65,7 @@ WXDIALOGUE_API WXDLptr wxdl_malloc(WXDLint _malloc_size);
 
 // 深拷贝
 // _pid 是通过wxdl_state_new_pid获取, 保证多线程安全操作的
-// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVAILD_PID
+// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVALID_PID
 // 用寄存器的话就加, 因为寄存器在pid的资源里
 WXDIALOGUE_API void wxdl_value_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLstate* _state, WXDLthread_resoucre* _pres);
 
@@ -74,7 +74,7 @@ WXDIALOGUE_API void wxdl_value_copy(WXDLvalue* _v1, WXDLvalue* _v2);
 
 // 浅拷贝
 // _pid 是通过wxdl_state_new_pid获取, 保证多线程安全操作的
-// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVAILD_PID
+// 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVALID_PID
 // 用寄存器的话就加, 因为寄存器在pid的资源里
 WXDIALOGUE_API void wxdl_value_shallow_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLstate* _state, WXDLthread_resoucre* _pres);
 
