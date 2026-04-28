@@ -69,7 +69,9 @@ typedef struct WXDLtext
 
 typedef struct WXDLthread_resoucre
 {
+    WXDLu32 pid;
     WXDLcall* caller;
+    // 当解析标签时，其默认为NULL
     WXDLhash* root;
     WXDLvalue R[WXDL_REG_SIZE];
     WXDLu64 inner_layer;
@@ -115,6 +117,8 @@ typedef struct WXDLloader
 
     // 使用的pid
     WXDLu32 pid;
+
+    WXDLthread_resoucre* pres;
 
     // log缓存
     WXDLlogbuff* logbuff;

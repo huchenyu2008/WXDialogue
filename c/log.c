@@ -75,7 +75,7 @@ void wxdl_log_error(WXDLloader* loader, const WXDLchar* where, const WXDLchar* t
     return;
 }
 
-void wxdl_log_call_error(WXDLstate* state, WXDLcall* call, const WXDLchar* text, WXDLu32 pid)
+void wxdl_log_call_error(WXDLstate* state, WXDLcall* call, const WXDLchar* text, WXDLthread_resoucre* pres)
 {
     WXDLlogbuff* lb = wxdl_state_logbuff(state);
     if (lb == NULL) return;
@@ -86,7 +86,7 @@ void wxdl_log_call_error(WXDLstate* state, WXDLcall* call, const WXDLchar* text,
         lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "WXDL Call Error file %s, pos (%d, %d), call '%s' :\n", c->where->str, c->line, c->xpos, c->name->str);
     else
         lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "WXDL Call Error file unkown, pos (%d, %d), call '%s' :\n", c->line, c->xpos, c->name->str);
-    WXDLthread_resoucre* res = wxdl_state_pid(state, pid);
+    WXDLthread_resoucre* res = pres;
 
     if (res != NULL)
     {

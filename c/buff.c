@@ -148,7 +148,7 @@ void wxdl_free_buff(WXDLbuff* _buff)
 
 WXDLu32 wxdl_buff_size(WXDLbuff* _buff)
 {
-    if (_buff == NULL) return NULL;
+    if (_buff == NULL) return 0;
     return  (_buff->buffsize - _buff->can_write_size);
 }
 

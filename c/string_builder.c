@@ -142,7 +142,7 @@ void wxdl_free_string(WXDLstring* _str)
         //printf("count down %s %lld\n", _str->str, _str->refcount);
         if (_str->refcount < 1)
         {
-            //printf("%lld\n", wxdl_hash_size(_str->builder->hash));
+            //printf("free %s\n", _str->str);
             if (_str->builder != NULL)
             {
                 WXDLhash_node* n = wxdl_hash_sr_remove(_str->builder->hash, _str);

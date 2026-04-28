@@ -84,7 +84,7 @@ void wxdl_arr_unlock(WXDLarr* _arr)
     _arr->lock = 0;
 }
 
-WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLstate* _state, WXDLu32 _pid)
+WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLstate* _state, WXDLthread_resoucre* _pres)
 {
 	if (_arr == NULL)
 		return NULL;
@@ -93,15 +93,32 @@ WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLstate* _state, WXDLu32 
 	WXDLarr* a = wxdl_new_arr(_arr->max_size, _arr->builder);
 	a->size = _arr->size;
 	WXDLvalue* v = NULL;
+	WXDLvalue* nv = NULL;
 	for (WXDLu64 i = 0; i < _arr->size; i++)
 	{
 		v = &_arr->data[i];
-		if (_state != NULL && v->type == WXDL_TYPE_CALL)
+		nv= &a->data[i];
+		if (_state != NULL)
 		{
-			wxdl_call(WXDL_V_CALL(*v), _state, v, _pid);
+            if (WXDL_V_TYPE(*v) == WXDL_TYPE_CALL)
+            {
+                wxdl_call(WXDL_V_CALL(*v), _state, nv, _pres);
+            }
+            else if (WXDL_V_TYPE(*v) == WXDL_TYPE_DIC)
+            {
+                wxdl_hash_copy_running(WXDL_V_DIC(*nv), _state, _pres);
+            }
+            else if (WXDL_V_TYPE(*v) == WXDL_TYPE_ARR)
+            {
+                wxdl_arr_copy_running(WXDL_V_ARR(*nv), _state, _pres);
+            }
+            else
+            {
+                wxdl_value_copy(nv, v);
+            }
 		}
 		else
-		    wxdl_value_shallow_copy(v, v);
+		    wxdl_value_shallow_copy(nv, v);
 	}
 
 	wxdl_arr_unlock(_arr);
@@ -110,7 +127,7 @@ WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLstate* _state, WXDLu32 
 
 WXDLarr* wxdl_arr_copy(WXDLarr* _arr)
 {
-	return wxdl_arr_copy_running(_arr, NULL, WXDL_INVAILD_PID);
+	return wxdl_arr_copy_running(_arr, NULL, NULL);
 }
 
 void wxdl_arr_clear(WXDLarr* _arr)

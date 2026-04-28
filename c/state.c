@@ -130,6 +130,7 @@ WXDLu32 wxdl_state_new_pid(WXDLstate* _state)
     _state->pres_fisrt_use = _state->pres_uses[pid];
     _state->pres_uses[pid] = WXDL_INVAILD_PID;
     _state->pid_size += 1;
+    _state->pres[pid].pid = pid;
 
     return pid;
 }

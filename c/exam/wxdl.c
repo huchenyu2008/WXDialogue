@@ -11,6 +11,7 @@
 #include "../lib.h"
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 
 int main()
@@ -51,17 +52,19 @@ int main()
 	printf("find %lld\n", wxdl_hash_path(wxdl_state_get_global(state), "color.black", 0)->v.data.i);
 
 	char text[] =
-		u8"{\nsize : @IF(@STRCMP('1', '12') ,@PRINT('你好如果输出我就是true', 634, ' ', true), @PRINT('你好如果输出我就是false', 777, ' ', false)),\n data : color.black,\n a.b : 1\n}\n";
+		u8"{\nsize : @IF(@STRCMP('1', '1') ,@PRINT(@STRCAT('op', ' hello')), @PRINT('你好如果输出我就是false', 777, ' ', false)),\n data : color.black,\n a.b : 1\n}\n";
 	printf("%s\n", text);
 
 
 	wxdl_state_set_logbuff(state, log_buff, sizeof(log_buff));
 	WXDLu32 pid = wxdl_state_new_pid(state);
 
-	WXDLblock* data = wxdl_parse_block(NULL, text, 0, WXDL_FALSE, "current", WXDL_INVAILD_PID, wxdl_state_logbuff(state));
+	clock_t c1 = clock();
+	WXDLblock* data = wxdl_parse_block(state, text, 0, WXDL_TRUE, "current", WXDL_INVAILD_PID, wxdl_state_logbuff(state));
 
+	clock_t c2 = clock();
 
-	printf("err %d\n", data == NULL);
+	printf("err %d time %f\n", data == NULL, (float)(c2 - c1) / CLOCKS_PER_SEC);
 	//printf("running\n");
 	//printf("parse err : %d\n", data == NULL);
 	//printf("%lld\n", wxdl_text_size(textdata));

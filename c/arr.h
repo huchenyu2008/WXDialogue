@@ -39,7 +39,7 @@ WXDIALOGUE_API void wxdl_arr_unlock(WXDLarr* _arr);
 // _pid 是通过wxdl_state_new_pid获取, 保证多线程安全操作的
 // 假如你的文本没那么复杂, 比如没用寄存器什么的, 那将_pid设置为 WXDL_INVAILD_PID
 // 用寄存器的话就加, 因为寄存器在pid的资源里
-WXDIALOGUE_API WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLstate* _state, WXDLu32 _pid);
+WXDIALOGUE_API WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLstate* _state, WXDLthread_resoucre* _pres);
 
 // 拷贝数组
 WXDIALOGUE_API WXDLarr* wxdl_arr_copy(WXDLarr* _arr);

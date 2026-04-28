@@ -903,7 +903,7 @@ WXDLerror _wxdl_parse_call(WXDLloader* _loader, WXDLvalue* pv)
                 // 这里是为了让报错指针指向函数名称位置
                 WXDLu64 lp = _loader->ptr;
                 _loader->ptr = xpos;
-                err = wxdl_call_ext(call, _loader->state, pv, _loader->pid, WXDL_TRUE);
+                err = wxdl_call_ext(call, _loader->state, pv, _loader->pres, WXDL_TRUE);
                 _loader->ptr = lp;
                 wxdl_free_call(call);
             }
@@ -1068,9 +1068,7 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
 
             WXDL_V_SET_STR(*_v, wxdl_try_gen_build_string(_loader->builder, path));
 
-            WXDLfunction_info fi;
-            fi.func = _wxdl_lib_getvar;
-            fi.is_change_param = WXDL_TRUE;
+            WXDLfunction_info fi = wxdl_state_get_func(_loader->state, WXDL_FUNC_NAME_GET_GLOBAL_VAR);
             WXDLcall* c = wxdl_new_call(WXDL_FUNC_NAME_GET_GLOBAL_VAR, &fi, _v, 1, _loader->builder);
             WXDL_V_SET_CALL(*_v, c);
         }
@@ -1482,6 +1480,7 @@ WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, con
     // 用于恢复pid内容
     WXDLchar* ltext = NULL;
     WXDLu64 ltext_size = 0;
+    WXDLhash* lroot = NULL;
 
     loader.state = _state;
     loader.is_running_call = WXDL_TRUE;
@@ -1507,21 +1506,24 @@ WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, con
     if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVAILD_PID;
     loader.pid = _pid;
 
-    WXDLthread_resoucre* rs = wxdl_state_pid(loader.state, loader.pid);
-    if (rs != NULL)
+    loader.pres = wxdl_state_pid(loader.state, loader.pid);
+    if (loader.pres != NULL)
     {
-        ltext = rs->text;
-        ltext_size = rs->text_size;
-        rs->text = _text;
-        rs->text_size = _text_size;
+        ltext = loader.pres->text;
+        ltext_size = loader.pres->text_size;
+        lroot = loader.pres->root;
+        loader.pres->text = _text;
+        loader.pres->text_size = _text_size;
+        loader.pres->root = NULL;
     }
 
     WXDLtext* t = _wxdl_parse(&loader);
 
-    if (rs != NULL)
+    if (loader.pres != NULL)
     {
-        rs->text = ltext;
-        rs->text_size = ltext_size;
+        loader.pres->text = ltext;
+        loader.pres->text_size = ltext_size;
+        loader.pres->root = lroot;
     }
     wxdl_free_arr(loader.use_local_signs);
     return t;
@@ -1537,6 +1539,7 @@ WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_si
     // 用于恢复pid内容
     WXDLchar* ltext = NULL;
     WXDLu64 ltext_size = 0;
+    WXDLhash* lroot = NULL;
 
     loader.state = _state;
     loader.builder = wxdl_state_get_string_builder(_state);
@@ -1562,13 +1565,14 @@ WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_si
     if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVAILD_PID;
     loader.pid = _pid;
 
-    WXDLthread_resoucre* rs = wxdl_state_pid(loader.state, loader.pid);
-    if (rs != NULL)
+    loader.pres = wxdl_state_pid(loader.state, loader.pid);
+    if (loader.pres != NULL)
     {
-        ltext = rs->text;
-        ltext_size = rs->text_size;
-        rs->text = _text;
-        rs->text_size = _text_size;
+        ltext = loader.pres->text;
+        ltext_size = loader.pres->text_size;
+        lroot = loader.pres->root;
+        loader.pres->text = _text;
+        loader.pres->text_size = _text_size;
     }
 
     WXDLblock* bl = NULL;
@@ -1582,6 +1586,12 @@ WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_si
         {
             _wxdl_loader_next(&loader);
             bl = wxdl_new_block(NULL, loader.builder);
+
+            if (loader.pres != NULL)
+            {
+                loader.pres->root = wxdl_block_data(bl);
+            }
+
             WXDLerror err = _wxdl_parse_block(&loader, NULL, bl->data, NULL, WXDL_FALSE, NULL, NULL);
             if (err)
             {
@@ -1589,10 +1599,11 @@ WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_si
                 goto _WXDL_BLOCK_PARSE_ERROR_GOTO;
             }
 
-            if (rs != NULL)
+            if (loader.pres != NULL)
             {
-                rs->text = ltext;
-                rs->text_size = ltext_size;
+                loader.pres->text = ltext;
+                loader.pres->text_size = ltext_size;
+                loader.pres->root = lroot;
             }
 
             wxdl_free_string(loader.where);
@@ -1606,10 +1617,11 @@ WXDLblock* wxdl_parse_block(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_si
     }
 _WXDL_BLOCK_PARSE_ERROR_GOTO:
 
-    if (rs != NULL)
+    if (loader.pres != NULL)
     {
-        rs->text = ltext;
-        rs->text_size = ltext_size;
+        loader.pres->text = ltext;
+        loader.pres->text_size = ltext_size;
+        loader.pres->root = lroot;
     }
     wxdl_free_string(loader.where);
     return NULL;
@@ -1619,7 +1631,8 @@ WXDLhash* wxdl_block_running(WXDLstate* _state, WXDLblock* _block, WXDLu32 _pid)
 {
     if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVAILD_PID;
 
-    return wxdl_hash_copy_running(_block->data, _state, _pid);
+    WXDLthread_resoucre* pres = wxdl_state_pid(_state, _pid);
+    return wxdl_hash_copy_running(_block->data, _state, pres);
 }
 
 WXDLblock* wxdl_new_block(WXDLhash* _refhash, WXDLstring_builder* _builder)

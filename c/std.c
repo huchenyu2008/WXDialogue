@@ -56,7 +56,7 @@ WXDLptr wxdl_malloc(WXDLint _malloc_size)
 	return (WXDLptr)malloc(_malloc_size);
 }
 
-void wxdl_value_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLstate* _state, WXDLu32 _pid)
+void wxdl_value_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLstate* _state, WXDLthread_resoucre* _pres)
 {
 	if (_v1 == NULL || _v2 == NULL)
 		return;
@@ -79,7 +79,7 @@ void wxdl_value_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLstate* _
 		if (_state == NULL)
 		    WXDL_V_SET_CALL(*_v1, wxdl_call_copy(_v2->data.c));
 		else
-			wxdl_call_ext(_v2->data.c, _state, _v1, _pid, WXDL_TRUE);
+			wxdl_call_ext(_v2->data.c, _state, _v1, _pres, WXDL_TRUE);
 		break;
 	default:
 		_v1->data.p = _v2->data.p;
@@ -91,10 +91,10 @@ void wxdl_value_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLstate* _
 
 void wxdl_value_copy(WXDLvalue* _v1, WXDLvalue* _v2)
 {
-	wxdl_value_copy_running(_v1, _v2, NULL, WXDL_INVAILD_PID);
+	wxdl_value_copy_running(_v1, _v2, NULL, NULL);
 }
 
-void wxdl_value_shallow_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLstate* _state, WXDLu32 _pid)
+void wxdl_value_shallow_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDLstate* _state, WXDLthread_resoucre* _pres)
 {
 	if (_v1 == NULL || _v2 == NULL)
 		return;
@@ -117,7 +117,7 @@ void wxdl_value_shallow_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDL
 		if (_state == NULL)
 			WXDL_V_SET_CALL(*_v1, wxdl_call_ref(_v2->data.c));
 		else
-			wxdl_call(_v2->data.c, _state, _v1, _pid);
+			wxdl_call(_v2->data.c, _state, _v1, _pres);
 	default:
 		_v1->data.p = _v2->data.p;
 		break;
@@ -128,7 +128,7 @@ void wxdl_value_shallow_copy_running(WXDLvalue* _v1, WXDLvalue* _v2, struct WXDL
 
 void wxdl_value_shallow_copy(WXDLvalue* _v1, WXDLvalue* _v2)
 {
-	wxdl_value_shallow_copy_running(_v1, _v2, NULL, WXDL_INVAILD_PID);
+	wxdl_value_shallow_copy_running(_v1, _v2, NULL, NULL);
 }
 
 void wxdl_free(WXDLptr _p)

@@ -22,6 +22,9 @@
 
 WXDLhash* wxdl_new_hash(WXDLu32 _table_size, WXDLstring_builder* _builder)
 {
+    if (_table_size == 0)
+        _table_size = 8;
+
 	WXDLhash* h = (WXDLhash*)wxdl_malloc(sizeof(WXDLhash));
 	h->table = wxdl_malloc(sizeof(WXDLhash_node*) * _table_size);
 	wxdl_set(h->table, 0, sizeof(WXDLhash_node*) * _table_size);
@@ -62,7 +65,7 @@ void wxdl_hash_unlock(WXDLhash* _hash)
         _hash->lock -= 1;
 }
 
-WXDLhash* wxdl_hash_copy_running(WXDLhash* _hash, struct WXDLstate* _state, WXDLu32 _pid)
+WXDLhash* wxdl_hash_copy_running(WXDLhash* _hash, struct WXDLstate* _state, WXDLthread_resoucre* _pres)
 {
 	// 复制所有值到对象
     if (_hash == NULL)
@@ -79,9 +82,24 @@ WXDLhash* wxdl_hash_copy_running(WXDLhash* _hash, struct WXDLstate* _state, WXDL
 		{
 		    WXDLhash_node* n = wxdl_hash_add_null(h, wxdl_hash_ite_key(ite)->str);
 
-			if (_state != NULL && WXDL_V_TYPE(*v) == WXDL_TYPE_CALL)
+			if (_state != NULL)
 			{
-			    wxdl_call(WXDL_V_CALL(*v), _state, &n->v, _pid);
+			    if (WXDL_V_TYPE(*v) == WXDL_TYPE_CALL)
+				{
+                    wxdl_call(WXDL_V_CALL(*v), _state, &n->v, _pres);
+				}
+			    else if (WXDL_V_TYPE(*v) == WXDL_TYPE_DIC)
+			    {
+					wxdl_hash_copy_running(WXDL_NODE_DIC(n), _state, _pres);
+				}
+			    else if (WXDL_V_TYPE(*v) == WXDL_TYPE_ARR)
+				{
+				    wxdl_arr_copy_running(WXDL_NODE_ARR(n), _state, _pres);
+				}
+			    else
+			    {
+			        wxdl_value_copy(&n->v, v);
+				}
 			}
 			else
 			{
@@ -99,7 +117,7 @@ WXDLhash* wxdl_hash_copy_running(WXDLhash* _hash, struct WXDLstate* _state, WXDL
 
 WXDLhash* wxdl_hash_copy(WXDLhash* _hash)
 {
-	return wxdl_hash_copy_running(_hash, NULL, WXDL_INVAILD_PID);
+	return wxdl_hash_copy_running(_hash, NULL, NULL);
 }
 
 void wxdl_hash_clear(WXDLhash* _hash)

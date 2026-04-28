@@ -106,7 +106,7 @@ void wxdl_free_call(WXDLcall* _call)
 		wxdl_free_string(_call->name);
 }
 
-WXDLerror wxdl_call_ext(WXDLcall* _v, struct WXDLstate* _state, WXDLvalue* _ret, WXDLu32 _pid, WXDLbool _is_ref_param)
+WXDLerror wxdl_call_ext(WXDLcall* _v, struct WXDLstate* _state, WXDLvalue* _ret, WXDLthread_resoucre* _pres, WXDLbool _is_ref_param)
 {
 	if (_v == NULL || _v->func == NULL)
 	{
@@ -119,20 +119,20 @@ WXDLerror wxdl_call_ext(WXDLcall* _v, struct WXDLstate* _state, WXDLvalue* _ret,
 	// 用于优化, 如果不用更改参数的话
 	if (_is_ref_param || _v->is_const_param)
 	{
-	    err = _v->func(_state, _v, _v->argv, _v->argc, _ret, _pid);
+	    err = _v->func(_state, _v, _v->argv, _v->argc, _ret, _pres);
 	}
 	else
 	{
 	    c = wxdl_call_copy(_v);
-		err = c->func(_state, _v, c->argv, c->argc, _ret, _pid);
+		err = c->func(_state, _v, c->argv, c->argc, _ret, _pres);
 		wxdl_free_call(c);
 	}
 	return err;
 }
 
-WXDLerror wxdl_call(WXDLcall* _v, struct WXDLstate* _state, WXDLvalue* _ret, WXDLu32 _pid)
+WXDLerror wxdl_call(WXDLcall* _v, struct WXDLstate* _state, WXDLvalue* _ret, WXDLthread_resoucre* _pres)
 {
-    return wxdl_call_ext(_v, _state, _ret, _pid, WXDL_FALSE);
+    return wxdl_call_ext(_v, _state, _ret, _pres, WXDL_FALSE);
 }
 
 WXDLcall* wxdl_call_copy(WXDLcall* _v2)
@@ -400,109 +400,113 @@ WXDLfunction wxdl_call_param_func(WXDLcall* _c)
 
 // param===================================================================================================
 
-WXDLerror wxdl_param_running(struct WXDLstate* _state, WXDLvalue* _v, WXDLvalue* _pv, WXDLu32 _pid)
+WXDLerror wxdl_param_running(struct WXDLstate* _state, WXDLvalue* _v, WXDLvalue* _pv, WXDLthread_resoucre* _pres)
 {
     WXDLvalue* param = _v;
     WXDLerror err = 0;
     if (WXDL_V_TYPE(*param) == WXDL_TYPE_CALL)
     {
         // 如果pid有效的话, 那就在pid里call层数计数加一
-        WXDLthread_resoucre* tr = wxdl_state_pid(_state, _pid);
+        WXDLthread_resoucre* tr = _pres;
         if (tr != NULL) tr->inner_layer += 1;
 
         WXDLcall* c = WXDL_V_CALL(*param);
         WXDL_V_TYPE(*param) = WXDL_TYPE_NULL;
-        err = wxdl_call_ext(c, _state, _pv, _pid, WXDL_TRUE);
+        err = wxdl_call_ext(c, _state, _pv, _pres, WXDL_TRUE);
         if (tr != NULL) tr->inner_layer -= 1;
+    }
+    else
+    {
+        *_pv = *_v;
     }
     return err;
 }
 
-WXDLerror wxdl_param_bool(struct WXDLstate* _state, WXDLvalue* _v, WXDLbool* _pv, WXDLu32 _pid)
+WXDLerror wxdl_param_bool(struct WXDLstate* _state, WXDLvalue* _v, WXDLbool* _pv, WXDLthread_resoucre* _pres)
 {
     if (_state == NULL || _v == NULL || _pv == NULL) return 1;
     WXDLvalue param;
-    WXDLerror err = wxdl_param_running(_state, _v, &param, _pid);
+    WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_bool(&param);
     return 0;
 }
 
-WXDLerror wxdl_param_int(struct WXDLstate* _state, WXDLvalue* _v, WXDLint* _pv, WXDLu32 _pid)
+WXDLerror wxdl_param_int(struct WXDLstate* _state, WXDLvalue* _v, WXDLint* _pv, WXDLthread_resoucre* _pres)
 {
     if (_state == NULL || _v == NULL || _pv == NULL) return 1;
     WXDLvalue param;
-    WXDLerror err = wxdl_param_running(_state, _v, &param, _pid);
+    WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_int(&param);
     return 0;
 }
 
-WXDLerror wxdl_param_float(struct WXDLstate* _state, WXDLvalue* _v, WXDLfloat* _pv, WXDLu32 _pid)
+WXDLerror wxdl_param_float(struct WXDLstate* _state, WXDLvalue* _v, WXDLfloat* _pv, WXDLthread_resoucre* _pres)
 {
     if (_state == NULL || _v == NULL || _pv == NULL) return 1;
     WXDLvalue param;
-    WXDLerror err = wxdl_param_running(_state, _v, &param, _pid);
+    WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_float(&param);
     return 0;
 }
 
-WXDLerror wxdl_param_str(struct WXDLstate* _state, WXDLvalue* _v, const WXDLchar** _pv, WXDLu32 _pid)
+WXDLerror wxdl_param_str(struct WXDLstate* _state, WXDLvalue* _v, const WXDLchar** _pv, WXDLthread_resoucre* _pres)
 {
     if (_state == NULL || _v == NULL || _pv == NULL) return 1;
     WXDLvalue param;
-    WXDLerror err = wxdl_param_running(_state, _v, &param, _pid);
+    WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_str(&param);
     return 0;
 }
 
-WXDLerror wxdl_param_str_ref(struct WXDLstate* _state, WXDLvalue* _v, WXDLstring** _pv, WXDLu32 _pid)
+WXDLerror wxdl_param_str_ref(struct WXDLstate* _state, WXDLvalue* _v, WXDLstring** _pv, WXDLthread_resoucre* _pres)
 {
     if (_state == NULL || _v == NULL || _pv == NULL) return 1;
     WXDLvalue param;
-    WXDLerror err = wxdl_param_running(_state, _v, &param, _pid);
+    WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_str_ref(&param);
     return 0;
 }
 
-WXDLerror wxdl_param_hash(struct WXDLstate* _state, WXDLvalue* _v, WXDLhash** _pv, WXDLu32 _pid)
+WXDLerror wxdl_param_hash(struct WXDLstate* _state, WXDLvalue* _v, WXDLhash** _pv, WXDLthread_resoucre* _pres)
 {
     if (_state == NULL || _v == NULL || _pv == NULL) return 1;
     WXDLvalue param;
-    WXDLerror err = wxdl_param_running(_state, _v, &param, _pid);
+    WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_hash(&param);
     return 0;
 }
 
-WXDLerror wxdl_param_arr(struct WXDLstate* _state, WXDLvalue* _v, WXDLarr** _pv, WXDLu32 _pid)
+WXDLerror wxdl_param_arr(struct WXDLstate* _state, WXDLvalue* _v, WXDLarr** _pv, WXDLthread_resoucre* _pres)
 {
     if (_state == NULL || _v == NULL || _pv == NULL) return 1;
     WXDLvalue param;
-    WXDLerror err = wxdl_param_running(_state, _v, &param, _pid);
+    WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_arr(&param);
     return 0;
 }
 
-WXDLerror wxdl_param_call(struct WXDLstate* _state, WXDLvalue* _v, WXDLcall** _pv, WXDLu32 _pid)
+WXDLerror wxdl_param_call(struct WXDLstate* _state, WXDLvalue* _v, WXDLcall** _pv, WXDLthread_resoucre* _pres)
 {
     if (_state == NULL || _v == NULL || _pv == NULL) return 1;
     WXDLvalue param;
-    WXDLerror err = wxdl_param_running(_state, _v, &param, _pid);
+    WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_call(&param);
     return 0;
 }
 
-WXDLerror wxdl_param_value(struct WXDLstate* _state, WXDLvalue* _v, WXDLvalue* _pv, WXDLu32 _pid)
+WXDLerror wxdl_param_value(struct WXDLstate* _state, WXDLvalue* _v, WXDLvalue* _pv, WXDLthread_resoucre* _pres)
 {
     if (_state == NULL || _v == NULL || _pv == NULL) return 1;
     if (WXDL_V_TYPE(*_v) == WXDL_TYPE_CALL)
-        return wxdl_param_running(_state, _v, _pv, _pid);
+        return wxdl_param_running(_state, _v, _pv, _pres);
     else
     {
         wxdl_value_shallow_copy(_pv, _v);

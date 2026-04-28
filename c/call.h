@@ -19,11 +19,11 @@ WXDIALOGUE_API WXDLcall* wxdl_call_copy(WXDLcall* _v);
 
 // 调用函数
 // _is_ref_param是是否在call时使用原本的call的param, 为否的话则拷贝参数
-WXDIALOGUE_API WXDLerror wxdl_call_ext(WXDLcall* _v, struct WXDLstate* _state, WXDLvalue* _ret, WXDLu32 _pid, WXDLbool _is_ref_param);
+WXDIALOGUE_API WXDLerror wxdl_call_ext(WXDLcall* _v, struct WXDLstate* _state, WXDLvalue* _ret, WXDLthread_resoucre* _pres, WXDLbool _is_ref_param);
 
 // 调用函数
 // 这不会释放call
-WXDIALOGUE_API WXDLerror wxdl_call(WXDLcall* _v, struct WXDLstate* _state, WXDLvalue* _ret, WXDLu32 _pid);
+WXDIALOGUE_API WXDLerror wxdl_call(WXDLcall* _v, struct WXDLstate* _state, WXDLvalue* _ret, WXDLthread_resoucre* _pres);
 
 // 清空参数
 WXDIALOGUE_API void wxdl_call_clear(WXDLcall* _c);
@@ -89,30 +89,30 @@ WXDIALOGUE_API WXDLfunction wxdl_call_param_func(WXDLcall* _c);
 WXDIALOGUE_API WXDLvalue* wxdl_param_at(WXDLcall* _c, WXDLu64 _index);
 
 // 获取参数(运行call，返回返回值，将返回值设置给_v)
-WXDIALOGUE_API WXDLerror wxdl_param_running(struct WXDLstate* _state, WXDLvalue* _v, WXDLvalue* _pv, WXDLu32 _pid);
+WXDIALOGUE_API WXDLerror wxdl_param_running(struct WXDLstate* _state, WXDLvalue* _v, WXDLvalue* _pv, WXDLthread_resoucre* _pres);
 
-WXDIALOGUE_API WXDLerror wxdl_param_bool(struct WXDLstate* _state, WXDLvalue* _v, WXDLbool* _pv, WXDLu32 _pid);
+WXDIALOGUE_API WXDLerror wxdl_param_bool(struct WXDLstate* _state, WXDLvalue* _v, WXDLbool* _pv, WXDLthread_resoucre* _pres);
 
-WXDIALOGUE_API WXDLerror wxdl_param_int(struct WXDLstate* _state, WXDLvalue* _v, WXDLint* _pv, WXDLu32 _pid);
+WXDIALOGUE_API WXDLerror wxdl_param_int(struct WXDLstate* _state, WXDLvalue* _v, WXDLint* _pv, WXDLthread_resoucre* _pres);
 
-WXDIALOGUE_API WXDLerror wxdl_param_float(struct WXDLstate* _state, WXDLvalue* _v, WXDLfloat* _pv, WXDLu32 _pid);
+WXDIALOGUE_API WXDLerror wxdl_param_float(struct WXDLstate* _state, WXDLvalue* _v, WXDLfloat* _pv, WXDLthread_resoucre* _pres);
 
-WXDIALOGUE_API WXDLerror wxdl_param_str(struct WXDLstate* _state, WXDLvalue* _v, const WXDLchar** _pv, WXDLu32 _pid);
-
-// 注意返回的不会添加引用计数需要自己增加引用计数
-WXDIALOGUE_API WXDLerror wxdl_param_str_ref(struct WXDLstate* _state, WXDLvalue* _v, WXDLstring** _pv, WXDLu32 _pid);
+WXDIALOGUE_API WXDLerror wxdl_param_str(struct WXDLstate* _state, WXDLvalue* _v, const WXDLchar** _pv, WXDLthread_resoucre* _pres);
 
 // 注意返回的不会添加引用计数需要自己增加引用计数
-WXDIALOGUE_API WXDLerror wxdl_param_hash(struct WXDLstate* _state, WXDLvalue* _v, WXDLhash** _pv, WXDLu32 _pid);
+WXDIALOGUE_API WXDLerror wxdl_param_str_ref(struct WXDLstate* _state, WXDLvalue* _v, WXDLstring** _pv, WXDLthread_resoucre* _pres);
 
 // 注意返回的不会添加引用计数需要自己增加引用计数
-WXDIALOGUE_API WXDLerror wxdl_param_arr(struct WXDLstate* _state, WXDLvalue* _v, WXDLarr** _pv, WXDLu32 _pid);
+WXDIALOGUE_API WXDLerror wxdl_param_hash(struct WXDLstate* _state, WXDLvalue* _v, WXDLhash** _pv, WXDLthread_resoucre* _pres);
 
 // 注意返回的不会添加引用计数需要自己增加引用计数
-WXDIALOGUE_API WXDLerror wxdl_param_call(struct WXDLstate* _state, WXDLvalue* _v, WXDLcall** _pv, WXDLu32 _pid);
+WXDIALOGUE_API WXDLerror wxdl_param_arr(struct WXDLstate* _state, WXDLvalue* _v, WXDLarr** _pv, WXDLthread_resoucre* _pres);
 
 // 注意返回的不会添加引用计数需要自己增加引用计数
-WXDIALOGUE_API WXDLerror wxdl_param_value(struct WXDLstate* _state, WXDLvalue* _v, WXDLvalue* _pv, WXDLu32 _pid);
+WXDIALOGUE_API WXDLerror wxdl_param_call(struct WXDLstate* _state, WXDLvalue* _v, WXDLcall** _pv, WXDLthread_resoucre* _pres);
+
+// 注意返回的不会添加引用计数需要自己增加引用计数
+WXDIALOGUE_API WXDLerror wxdl_param_value(struct WXDLstate* _state, WXDLvalue* _v, WXDLvalue* _pv, WXDLthread_resoucre* _pres);
 
 // 确定参数类型
 WXDIALOGUE_API WXDLbool wxdl_param_check(const WXDLvalue* _argv, WXDLu32 _argc, const WXDLflag* flags, WXDLu32 flag_size);

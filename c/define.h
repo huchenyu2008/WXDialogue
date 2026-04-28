@@ -33,6 +33,30 @@
 #define WXDL_FUNC_NAME_PRINT "PRINT"
 
 #define WXDL_FUNC_NAME_STR_CMP "STRCMP"
+
+#define WXDL_FUNC_NAME_STR_CAT "STRCAT"
+
+#define WXDL_FUNC_NAME_STR_LEN "STRLEN"
+
+#define WXDL_FUNC_NAME_ADD "ADD"
+
+#define WXDL_FUNC_NAME_SUB "SUB"
+
+#define WXDL_FUNC_NAME_MUL "MUL"
+
+#define WXDL_FUNC_NAME_DIV "DIV"
+
+#define WXDL_FUNC_NAME_MOD "MOD"
+
+#define WXDL_FUNC_NAME_AND "AND"
+
+#define WXDL_FUNC_NAME_OR "OR"
+
+#define WXDL_FUNC_NAME_BAND "BAND"
+
+#define WXDL_FUNC_NAME_BOR "BOR"
+
+#define WXDL_FUNC_NAME_NOT "NOT"
 // 缓存大小
 #define WXDL_BUFF_SIZE 4096
 
@@ -201,7 +225,7 @@ typedef struct WXDLhash_node
 }WXDLhash_node;
 
 // 调用函数
-typedef WXDLerror (*WXDLfunction)(struct WXDLstate* state, struct WXDLcall* call, struct WXDLvalue* args, WXDLu32 arg_count, struct WXDLvalue* ret, WXDLu32 _pid);
+typedef WXDLerror (*WXDLfunction)(struct WXDLstate* state, struct WXDLcall* call, struct WXDLvalue* args, WXDLu32 arg_count, struct WXDLvalue* ret, WXDLthread_resoucre* _pres);
 
 // 函数调用信息
 typedef struct WXDLcall
