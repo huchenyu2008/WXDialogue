@@ -32,12 +32,20 @@
 
 #define WXDL_FUNC_NAME_PRINT "PRINT"
 
+#define WXDL_FUNC_NAME_REG "REG"
+
+#define WXDL_FUNC_NAME_ROOT "ROOT"
+
+#define WXDL_FUNC_NAME_VEC "VEC"
+
+// string
 #define WXDL_FUNC_NAME_STR_CMP "STRCMP"
 
 #define WXDL_FUNC_NAME_STR_CAT "STRCAT"
 
 #define WXDL_FUNC_NAME_STR_LEN "STRLEN"
 
+// num op
 #define WXDL_FUNC_NAME_ADD "ADD"
 
 #define WXDL_FUNC_NAME_SUB "SUB"
@@ -57,6 +65,30 @@
 #define WXDL_FUNC_NAME_BOR "BOR"
 
 #define WXDL_FUNC_NAME_NOT "NOT"
+
+// num func
+#define WXDL_FUNC_NAME_POW "POW"
+
+#define WXDL_FUNC_NAME_LOG "LOG"
+
+#define WXDL_FUNC_NAME_LOG2 "LOG2"
+
+#define WXDL_FUNC_NAME_LOG10 "LOG10"
+
+#define WXDL_FUNC_NAME_SQRT "SQRT"
+
+#define WXDL_FUNC_NAME_SIN "SIN"
+
+#define WXDL_FUNC_NAME_COS "COS"
+
+#define WXDL_FUNC_NAME_TAN "TAN"
+
+#define WXDL_FUNC_NAME_ASIN "ASIN"
+
+#define WXDL_FUNC_NAME_ACOS "ACOS"
+
+#define WXDL_FUNC_NAME_ATAN "ATAN"
+
 // 缓存大小
 #define WXDL_BUFF_SIZE 4096
 

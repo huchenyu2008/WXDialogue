@@ -12,27 +12,27 @@ typedef struct WXDLlog
 #ifdef _MSC_VER
 #define WXDL_ERR_LOG(state, call, pres, text, ...) \
     {\
-        static char _wxdl_log_info_buff[128];\
+        static char _wxdl_log_info_buff[1024];\
         snprintf(_wxdl_log_info_buff, 1024, text, __VA_ARGS__);\
         wxdl_log_call_error(state, call, _wxdl_log_info_buff, pres);\
     }
 #define WXDL_LOG_WRITE(loader, where, text, ...) \
     {\
-        static char _wxdl_log_info_buff[128];\
+        static char _wxdl_log_info_buff[1024];\
         snprintf(_wxdl_log_info_buff, 1024, text, __VA_ARGS__);\
         wxdl_log_error(loader, where, _wxdl_log_info_buff);\
     }
 #else
 #define WXDL_ERR_LOG(state, call, pres, text, ...) \
     {\
-        static char _wxdl_log_info_buff[128];\
+        static char _wxdl_log_info_buff[1024];\
         snprintf(_wxdl_log_info_buff, 1024, text, ##__VA_ARGS__);\
         wxdl_log_call_error(state, call, _wxdl_log_info_buff, pres);\
     }
 
 #define WXDL_LOG_WRITE(loader, where, text, ...) \
     {\
-        static char _wxdl_log_info_buff[128];\
+        static char _wxdl_log_info_buff[1024];\
         snprintf(_wxdl_log_info_buff, 1024, text, ##__VA_ARGS__);\
         wxdl_log_error(loader, where, _wxdl_log_info_buff);\
     }

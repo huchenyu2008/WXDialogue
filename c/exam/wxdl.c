@@ -52,7 +52,7 @@ int main()
 	printf("find %lld\n", wxdl_hash_path(wxdl_state_get_global(state), "color.black", 0)->v.data.i);
 
 	char text[] =
-		u8"{\nsize : @IF(@STRCMP('1', '1') ,@PRINT(@STRCAT('op', ' hello')), @PRINT('你好如果输出我就是false', 777, ' ', false)),\n data : color.black,\n a.b : 1\n}\n";
+		u8"{\nsize : @IF(@STRCMP('1', '1') ,@PRINT(@STRCAT('op', ' hello')), @PRINT('你好如果输出我就是false', 777, ' ', false)),\n data : color.black,\n a.b : @VEC(1, 2, 3, 4)\n}\n";
 	printf("%s\n", text);
 
 

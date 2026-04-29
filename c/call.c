@@ -429,6 +429,7 @@ WXDLerror wxdl_param_bool(struct WXDLstate* _state, WXDLvalue* _v, WXDLbool* _pv
     WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_bool(&param);
+    wxdl_free_value(&param);
     return 0;
 }
 
@@ -439,6 +440,7 @@ WXDLerror wxdl_param_int(struct WXDLstate* _state, WXDLvalue* _v, WXDLint* _pv, 
     WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_int(&param);
+    wxdl_free_value(&param);
     return 0;
 }
 
@@ -449,6 +451,7 @@ WXDLerror wxdl_param_float(struct WXDLstate* _state, WXDLvalue* _v, WXDLfloat* _
     WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_float(&param);
+    wxdl_free_value(&param);
     return 0;
 }
 
@@ -459,6 +462,7 @@ WXDLerror wxdl_param_str(struct WXDLstate* _state, WXDLvalue* _v, const WXDLchar
     WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
     *_pv = wxdl_value_str(&param);
+    wxdl_free_value(&param);
     return 0;
 }
 
@@ -468,7 +472,8 @@ WXDLerror wxdl_param_str_ref(struct WXDLstate* _state, WXDLvalue* _v, WXDLstring
     WXDLvalue param;
     WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
-    *_pv = wxdl_value_str_ref(&param);
+    *_pv = wxdl_string_ref(wxdl_value_str_ref(&param));
+    wxdl_free_value(&param);
     return 0;
 }
 
@@ -478,7 +483,8 @@ WXDLerror wxdl_param_hash(struct WXDLstate* _state, WXDLvalue* _v, WXDLhash** _p
     WXDLvalue param;
     WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
-    *_pv = wxdl_value_hash(&param);
+    *_pv = wxdl_hash_ref(wxdl_value_hash(&param));
+    wxdl_free_value(&param);
     return 0;
 }
 
@@ -488,7 +494,8 @@ WXDLerror wxdl_param_arr(struct WXDLstate* _state, WXDLvalue* _v, WXDLarr** _pv,
     WXDLvalue param;
     WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
-    *_pv = wxdl_value_arr(&param);
+    *_pv = wxdl_arr_ref(wxdl_value_arr(&param));
+    wxdl_free_value(&param);
     return 0;
 }
 
@@ -498,7 +505,8 @@ WXDLerror wxdl_param_call(struct WXDLstate* _state, WXDLvalue* _v, WXDLcall** _p
     WXDLvalue param;
     WXDLerror err = wxdl_param_running(_state, _v, &param, _pres);
 
-    *_pv = wxdl_value_call(&param);
+    *_pv = wxdl_call_ref(wxdl_value_call(&param));
+    wxdl_free_value(&param);
     return 0;
 }
 

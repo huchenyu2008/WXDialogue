@@ -99,19 +99,19 @@ WXDIALOGUE_API WXDLerror wxdl_param_float(struct WXDLstate* _state, WXDLvalue* _
 
 WXDIALOGUE_API WXDLerror wxdl_param_str(struct WXDLstate* _state, WXDLvalue* _v, const WXDLchar** _pv, WXDLthread_resoucre* _pres);
 
-// 注意返回的不会添加引用计数需要自己增加引用计数
+// 注意返回的值需要手动销毁
 WXDIALOGUE_API WXDLerror wxdl_param_str_ref(struct WXDLstate* _state, WXDLvalue* _v, WXDLstring** _pv, WXDLthread_resoucre* _pres);
 
-// 注意返回的不会添加引用计数需要自己增加引用计数
+// 注意返回的值需要手动销毁
 WXDIALOGUE_API WXDLerror wxdl_param_hash(struct WXDLstate* _state, WXDLvalue* _v, WXDLhash** _pv, WXDLthread_resoucre* _pres);
 
-// 注意返回的不会添加引用计数需要自己增加引用计数
+// 注意返回的值需要手动销毁
 WXDIALOGUE_API WXDLerror wxdl_param_arr(struct WXDLstate* _state, WXDLvalue* _v, WXDLarr** _pv, WXDLthread_resoucre* _pres);
 
-// 注意返回的不会添加引用计数需要自己增加引用计数
+// 注意返回的值需要手动销毁
 WXDIALOGUE_API WXDLerror wxdl_param_call(struct WXDLstate* _state, WXDLvalue* _v, WXDLcall** _pv, WXDLthread_resoucre* _pres);
 
-// 注意返回的不会添加引用计数需要自己增加引用计数
+// 注意返回的值需要手动销毁
 WXDIALOGUE_API WXDLerror wxdl_param_value(struct WXDLstate* _state, WXDLvalue* _v, WXDLvalue* _pv, WXDLthread_resoucre* _pres);
 
 // 确定参数类型

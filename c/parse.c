@@ -727,7 +727,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                         node = wxdl_hash_add_null(_hash, str);
                     else
                     {
-                        WXDL_LOG_WRITE(_loader, _loader->where->str, "Failed to fetch data correctly.");
+                        WXDL_LOG_WRITE(_loader, _loader->where->str, "Failed to fetch data '%s' correctly.", str);
                         wxdl_free(str);
                         return 1;
                     }
@@ -752,7 +752,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                         node = wxdl_hash_add_null(v->data.d, str);
                     else
                     {
-                        WXDL_LOG_WRITE(_loader, _loader->where->str, "Failed to fetch data correctly.");
+                        WXDL_LOG_WRITE(_loader, _loader->where->str, "Failed to fetch data '%s' correctly.", str);
                         wxdl_free(str);
                         return 1;
                     }

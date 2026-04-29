@@ -138,7 +138,7 @@ void wxdl_free(WXDLptr _p)
 
 void wxdl_free_value(WXDLvalue* _pv)
 {
-	if (_pv == NULL)
+	if (_pv == NULL || _pv->type == WXDL_TYPE_NULL)
 		return;
 
 	switch (_pv->type)

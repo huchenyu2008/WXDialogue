@@ -70,6 +70,7 @@ WXDLstate* wxdl_new_state(WXDLstring_builder* _builder)
 	wxdl_hash_add_null(s->global, "null");
 	wxdl_hash_add_bool(s->global, "true", WXDL_TRUE);
 	wxdl_hash_add_bool(s->global, "false", WXDL_FALSE);
+	wxdl_hash_add_float(s->global, "PI", 3.14159265358979323846);
 
 	s->texts = NULL;
 	s->end_text = NULL;
