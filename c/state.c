@@ -86,6 +86,7 @@ void wxdl_free_state(WXDLstate* _state)
         _wxdl_state_pid_free(_state->pres + i);
 	wxdl_free(_state->pres);
 	wxdl_free(_state->pres_uses);
+	wxdl_free_builder(_state->builder);
 
 	wxdl_free_hash(_state->global);
 	wxdl_free_hash(_state->signs);

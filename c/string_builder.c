@@ -1,7 +1,7 @@
 #ifndef _WXDIALOGUE_STRING_BUILDER_C_
 #define _WXDIALOGUE_STRING_BUILDER_C_
 #include "./string_builder.h"
-#include "define.h"
+#include "type_define.h"
 #include "hash.h"
 #include "iterator.h"
 #include "std.h"
@@ -10,7 +10,7 @@
 typedef struct WXDLstring_builder
 {
     WXDLhash* hash;
-    WXDLu32 recount;
+    WXDLint32 recount;
 }WXDLstring_builder;
 
 WXDLstring_builder* _wxdl_global_builder = NULL;
@@ -28,8 +28,9 @@ WXDLstring_builder* wxdl_get_global_builder()
 WXDLstring_builder* wxdl_new_builder()
 {
     WXDLstring_builder* bs = (WXDLstring_builder*)wxdl_malloc(sizeof(WXDLstring_builder));
+    bs->recount = 0;
     bs->hash = wxdl_new_hash(32, bs);
-    bs->recount = 1;
+    //printf("new builder【%p】!!!\n", bs);
     return bs;
 }
 
@@ -38,6 +39,7 @@ WXDLstring_builder* wxdl_builder_ref(WXDLstring_builder* _builder)
     if (_builder != NULL)
     {
         _builder->recount += 1;
+        //printf("add builder[%p] count %d\n", _builder, _builder->recount);
     }
     return _builder;
 }
@@ -47,9 +49,11 @@ void wxdl_free_builder(WXDLstring_builder* _builder)
     if (_builder == NULL) return;
 
     _builder->recount -= 1;
+    //printf("builder[%p] count %d\n", _builder, _builder->recount);
     if (_builder->recount > 0) return;
 
     // 将string里的builder都设为null
+    //printf("builder free count 1\n");
     WXDLiterator* ite = wxdl_hash_ite(_builder->hash);
     do {
         WXDLstring* k = wxdl_hash_ite_key(ite);
@@ -58,8 +62,18 @@ void wxdl_free_builder(WXDLstring_builder* _builder)
             k->builder = NULL;
         }
     }while (wxdl_iterator_next(ite));
+    wxdl_iterator_free(ite);
+    //printf("builder free count 2 %p\n", _builder->hash);
 
-    wxdl_free_hash(_builder->hash);
+    // 这里的hash删除是例外
+    // 因为改表里的stringref是不记引用的
+    // 所以不可用clear
+
+    wxdl_free(_builder->hash->table);
+    //printf("builder free count 2-2\n");
+
+    wxdl_free(_builder->hash);
+    //printf("builder free count 3\n");
     wxdl_free(_builder);
 }
 
@@ -142,7 +156,7 @@ void wxdl_free_string(WXDLstring* _str)
         //printf("count down %s %lld\n", _str->str, _str->refcount);
         if (_str->refcount < 1)
         {
-            //printf("free %s\n", _str->str);
+            //printf("free %s %p\n", _str->str, _str->builder);
             if (_str->builder != NULL)
             {
                 WXDLhash_node* n = wxdl_hash_sr_remove(_str->builder->hash, _str);

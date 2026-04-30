@@ -196,7 +196,6 @@ WXDLu64 _wxdl_saver_out_hash(WXDLsaver* _saver, WXDLhash* _v, WXDLu64 _deep)
     WXDLvalue* pv;
     WXDLiterator* ite;
 
-    s += _wxdl_saver_out_tab(_saver, _deep);
     wxdl_buff_set_write_chr(_saver->buff, '{');
 
     ite = wxdl_hash_ite(_v);

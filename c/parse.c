@@ -1483,6 +1483,7 @@ WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, con
     WXDLhash* lroot = NULL;
 
     loader.state = _state;
+    loader.builder = wxdl_state_get_string_builder(_state);
     loader.is_running_call = WXDL_TRUE;
     loader.where = wxdl_build_string(loader.builder, _where);
     if (loader.where == NULL)

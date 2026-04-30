@@ -161,6 +161,8 @@ void wxdl_free_hash(WXDLhash* _hash)
 	{
 		wxdl_hash_clear(_hash);
 
+		wxdl_free_builder(_hash->builder);
+
 		wxdl_free(_hash->table);
 
 		wxdl_free(_hash);

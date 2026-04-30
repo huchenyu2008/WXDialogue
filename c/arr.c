@@ -162,6 +162,7 @@ void wxdl_free_arr(WXDLarr* _arr)
 	if (_arr->refcount == 0)
 	{
 		wxdl_arr_clear(_arr);
+		wxdl_free_builder(_arr->builder);
 		wxdl_free(_arr);
 	}
 }
