@@ -699,7 +699,7 @@ WXDLerror _wxdl_parse_hash_path(WXDLloader* _loader, WXDLhash* _hash, WXDLvalue*
                 // 判断标记
                 if (n == NULL)
                 {
-                    WXDL_LOG_WRITE(_loader, _loader->where->str, "Invalid path cannot locate the target node. Please check if the path is correct.");
+                    WXDL_LOG_WRITE(_loader, _loader->where->str, "Invalid path '%s' cannot locate the target node. Please check if the path is correct.", str);
                     wxdl_free(str);
                     return 1;
                 }
@@ -1310,6 +1310,7 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
             {
                 WXDLu64 text_len = textsize;
                 WXDLtext_node* n = (WXDLtext_node*)wxdl_malloc(sizeof(WXDLtext_node));
+                wxdl_set(n, 0, sizeof(*n));
                 n->type = WXDL_TEXT_NODE_TEXT;
                 n->data = NULL;
                 n->text = wxdl_malloc(sizeof(WXDLchar) * text_len + 1);
@@ -1455,11 +1456,11 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
     {
         WXDLu64 text_len = loader->ptr - text_start;
         WXDLtext_node* n = (WXDLtext_node*)wxdl_malloc(sizeof(WXDLtext_node));
+        wxdl_set(n, 0, sizeof(*n));
         n->type = WXDL_TEXT_NODE_TEXT;
         n->data = NULL;
         n->text = wxdl_malloc(sizeof(WXDLchar) * text_len + 1);
         n->text[text_len] = 0;
-        n->use_local_tables = NULL;
         wxdl_copy(n->text, loader->text + text_start, text_len);
 
         wxdl_text_add(text, n);

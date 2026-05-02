@@ -118,6 +118,7 @@
 #else
     #define CPU_PAUSE() ((void)0)
 #endif
+
 typedef void* WXDLptr;
 
 typedef int WXDLbool;
