@@ -568,7 +568,7 @@ WXDLhash_node* wxdl_hash_remove(WXDLhash* _hash, const WXDLchar* _key)
 			if (ln != NULL)
 				WXDL_NODE_NEXT(ln) = WXDL_NODE_NEXT(n);
 			else
-				_hash->table[code] = NULL;
+				_hash->table[code] = WXDL_NODE_NEXT(n);
 			_hash->size -= 1;
 			wxdl_hash_unlock(_hash);
 			return n;
@@ -598,7 +598,7 @@ WXDLhash_node* wxdl_hash_sr_remove(WXDLhash* _hash, const WXDLstring* _key)
 			if (ln != NULL)
 				WXDL_NODE_NEXT(ln) = WXDL_NODE_NEXT(n);
 			else
-				_hash->table[code] = NULL;
+				_hash->table[code] = WXDL_NODE_NEXT(n);
 			_hash->size -= 1;
 			wxdl_hash_unlock(_hash);
 			return n;

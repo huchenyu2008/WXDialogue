@@ -331,7 +331,7 @@ WXDLerror _wxdl_parse_number(WXDLloader* _loader, WXDLint* _pint, WXDLfloat* pfl
     // 返回对应类型值
     if (f_bit)
     {
-        *pfloat = ((WXDLfloat)(i)+(WXDLfloat)(f / f_bit)) * ft;
+        *pfloat = ((WXDLfloat)(i)+(WXDLfloat)((WXDLfloat)f / f_bit)) * ft;
     }
     else
     {
@@ -1259,6 +1259,7 @@ WXDLerror _wxdl_parse_block(WXDLloader* loader, WXDLtext* text, WXDLhash* dic, W
         }
         else
         {
+            is_break = WXDL_FALSE;
             // 报错!!!
             // 不正常退出
             break;
@@ -1631,6 +1632,7 @@ _WXDL_BLOCK_PARSE_ERROR_GOTO:
 
 WXDLhash* wxdl_block_running(WXDLstate* _state, WXDLblock* _block, WXDLu32 _pid)
 {
+    if (_state == NULL || _block == NULL) return NULL;
     if (!wxdl_state_pid_vaild(_state, _pid)) _pid = WXDL_INVALID_PID;
 
     WXDLthread_resoucre* pres = wxdl_state_pid(_state, _pid);

@@ -16,6 +16,12 @@ typedef struct WXDLhash
 	WXDLu32 lockthread;
 }WXDLhash;
 
+typedef struct WXDLstring_builder
+{
+    WXDLhash* hash;
+    WXDLint32 recount;
+}WXDLstring_builder;
+
 // state============================================================================================
 
 typedef struct WXDLstate

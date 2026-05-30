@@ -7,11 +7,6 @@
 #include "std.h"
 #include <stdio.h>
 
-typedef struct WXDLstring_builder
-{
-    WXDLhash* hash;
-    WXDLint32 recount;
-}WXDLstring_builder;
 
 WXDLstring_builder* _wxdl_global_builder = NULL;
 

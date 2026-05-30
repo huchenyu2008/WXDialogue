@@ -4,7 +4,7 @@
 #include "hash.h"
 
 #define _WXDL_INIT_STRING(_builder, _str, _cstr) \
-    str = (WXDLstring*)wxdl_malloc(sizeof(WXDLstring));\
+    _str = (WXDLstring*)wxdl_malloc(sizeof(WXDLstring));\
         _str->str = wxdl_new_str(_cstr);\
         _str->hashcode = wxdl_str_hashcode(_cstr);\
         _str->builder = _builder;\
@@ -12,7 +12,7 @@
         _str->refcount = 1;\
 
 #define _WXDL_INIT_STRING_WITH_CODE(_builder, _str, _cstr, _hashcode) \
-    str = (WXDLstring*)wxdl_malloc(sizeof(WXDLstring));\
+    _str = (WXDLstring*)wxdl_malloc(sizeof(WXDLstring));\
         _str->str = wxdl_new_str(_cstr);\
         _str->hashcode = _hashcode;\
         _str->builder = _builder;\
@@ -21,7 +21,7 @@
 
 // 传进的_cstr不会拷贝
 #define _WXDL_INIT_STRING_WITH_REF_AND_CODE(_builder, _str, _cstr, _hashcode) \
-    str = (WXDLstring*)wxdl_malloc(sizeof(WXDLstring));\
+    _str = (WXDLstring*)wxdl_malloc(sizeof(WXDLstring));\
         _str->str = _cstr;\
         _str->hashcode = _hashcode;\
         _str->builder = _builder;\

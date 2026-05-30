@@ -146,7 +146,7 @@ void wxdl_state_free_pid(WXDLstate* _state, WXDLu32 _pid)
         if (_state->pres_uses[_pid] == WXDL_INVALID_PID)
         {
             _wxdl_state_pid_free(_state->pres + _pid);
-            _state->pres_uses[_pid] = _state->pres_uses[_state->pres_fisrt_use];
+            _state->pres_uses[_pid] = _state->pres_fisrt_use;
             _state->pres_fisrt_use = _pid;
             _state->pid_size -= 1;
         }
@@ -315,7 +315,8 @@ WXDLhash_node* wxdl_state_add_func(WXDLstate* _state, const WXDLchar* _name, WXD
 		return NULL;
 
 	WXDLhash_node* n = wxdl_hash_add_ptr(_state->funcs, _name, func);
-	n->v.flag |= WXDL_FLAG_FUNC_NOT_SET_PARAM;
+	if (!_is_change_param)
+	    n->v.flag |= WXDL_FLAG_FUNC_NOT_SET_PARAM;
 	return n;
 }
 

@@ -575,6 +575,54 @@ WXDLerror _wxdl_lib_atan(struct WXDLstate* state, struct WXDLcall* call, struct 
     return 0;
 }
 
+WXDLerror _wxdl_lib_load(struct WXDLstate* state, struct WXDLcall* call, struct WXDLvalue* args, WXDLu32 arg_count, struct WXDLvalue* ret, WXDLthread_resoucre* pres)
+{
+    if (arg_count < 1)
+    {
+        WXDL_ERR_LOG(state, call, pres, "func 'LOAD' need one params");
+        return 1;
+    }
+
+    WXDLstring* s1;
+    wxdl_param_str_ref(state, &args[0], &s1, pres);
+    if (s1 == NULL)
+    {
+        WXDL_ERR_LOG(state, call, pres, "func 'LOAD' first param need a string value");
+        return 1;
+    }
+
+    FILE* fd = fopen(s1->str, "r");
+    if (fd == NULL)
+    {
+        wxdl_free_string(s1);
+        WXDL_ERR_LOG(state, call, pres, "func 'LOAD' open file '%s' failed", s1->str);
+        return 1;
+    }
+
+    fseek(fd, 0, SEEK_END);
+    long len = ftell(fd);
+    fseek(fd, 0, SEEK_SET);
+
+    WXDLchar* buff = wxdl_malloc(len + 1);
+    fread(buff, 1, len, fd);
+    buff[len] = 0;
+
+    WXDLblock* bl = wxdl_parse_block(state, buff, (WXDLu64)len, WXDL_TRUE, s1->str, pres->pid, wxdl_state_logbuff(state));
+    wxdl_free(buff);
+    if (bl == NULL)
+    {
+        wxdl_free_string(s1);
+        WXDL_ERR_LOG(state, call, pres, "func 'LOAD' load file '%s' failed", s1->str);
+        return 1;
+    }
+
+    WXDL_V_SET_DIC(*ret, wxdl_hash_ref(wxdl_block_data(bl)));
+    wxdl_free_block(bl);
+    wxdl_free_string(s1);
+    fclose(fd);
+    return 0;
+}
+
 void wxdl_init_std_lib(WXDLstate* _state)
 {
     if (_state == NULL) return;
@@ -617,6 +665,7 @@ void wxdl_init_std_lib(WXDLstate* _state)
     wxdl_state_add_func(_state, WXDL_FUNC_NAME_ACOS, _wxdl_lib_acos, WXDL_FALSE);
     wxdl_state_add_func(_state, WXDL_FUNC_NAME_ATAN, _wxdl_lib_atan, WXDL_FALSE);
 
+    wxdl_state_add_func(_state, "LOAD", _wxdl_lib_load, WXDL_FALSE);
 
     return;
 }
