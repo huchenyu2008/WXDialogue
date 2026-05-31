@@ -407,13 +407,22 @@ WXDLerror wxdl_param_running(struct WXDLstate* _state, WXDLvalue* _v, WXDLvalue*
     if (WXDL_V_TYPE(*param) == WXDL_TYPE_CALL)
     {
         // 如果pid有效的话, 那就在pid里call层数计数加一
+        WXDLcall* c = WXDL_V_CALL(*param), *lc = NULL;
         WXDLthread_resoucre* tr = _pres;
-        if (tr != NULL) tr->inner_layer += 1;
+        if (tr != NULL)
+        {
+            tr->inner_layer += 1;
+            lc = tr->caller;
+            tr->caller = c;
+        }
 
-        WXDLcall* c = WXDL_V_CALL(*param);
         WXDL_V_TYPE(*param) = WXDL_TYPE_NULL;
         err = wxdl_call_ext(c, _state, _pv, _pres, WXDL_TRUE);
-        if (tr != NULL) tr->inner_layer -= 1;
+        if (tr != NULL)
+        {
+            tr->inner_layer -= 1;
+            tr->caller = lc;
+        }
     }
     else
     {

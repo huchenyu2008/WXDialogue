@@ -103,6 +103,22 @@ WXDIALOGUE_API void wxdl_text_runing_at(WXDLtext* _text, WXDLu64 _index, WXDLhas
 // 获取节点数量
 WXDIALOGUE_API WXDLu64 wxdl_text_size(WXDLtext* _text);
 
+// WXDLthread_resoucre================================================================================
+
+// 获取指定pres的pid
+WXDIALOGUE_API WXDLu32 wxdl_state_pres_get_pid(WXDLthread_resoucre* _pres);
+
+// 获取指定pres的根表
+WXDIALOGUE_API WXDLhash* wxdl_state_pres_get_root(WXDLthread_resoucre* _pres);
+
+// 获取指定pres的当前调用者
+WXDIALOGUE_API WXDLcall* wxdl_state_pres_get_caller(WXDLthread_resoucre* _pres);
+
+// 获取当前代码层数
+WXDIALOGUE_API WXDLu64 wxdl_state_pres_get_inner_layer(WXDLthread_resoucre* _pres);
+
+// 获取指定寄存器
+WXDIALOGUE_API WXDLvalue* wxdl_state_pres_get_reg(WXDLthread_resoucre* _pres, WXDLu64 _id);
 
 
 #endif

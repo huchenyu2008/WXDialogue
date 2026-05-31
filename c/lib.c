@@ -166,12 +166,13 @@ WXDLerror _wxdl_lib_reg(struct WXDLstate* state, struct WXDLcall* call, struct W
         return 1;
     }
 
+    WXDLvalue* reg = wxdl_state_pres_get_reg(pres, p1);
     // 参数2为设置数值
     if (arg_count > 1)
     {
-        wxdl_value_shallow_copy_running(&pres->R[p1], &args[1], state, pres);
+        wxdl_value_shallow_copy_running(reg, &args[1], state, pres);
     }
-    wxdl_value_shallow_copy(ret, &pres->R[p1]);
+    wxdl_value_shallow_copy(ret, reg);
     return 0;
 }
 
@@ -185,7 +186,7 @@ WXDLerror _wxdl_lib_root(struct WXDLstate* state, struct WXDLcall* call, struct 
     }
 
 
-    WXDL_V_SET_DIC(*ret, wxdl_hash_ref(pres->root));
+    WXDL_V_SET_DIC(*ret, wxdl_hash_ref(wxdl_state_pres_get_root(pres)));
     return 0;
 }
 

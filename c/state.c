@@ -450,3 +450,55 @@ WXDLu64 wxdl_text_size(WXDLtext* _text)
 	else
 		return _text->size;
 }
+
+// WXDLthread_resoucre================================================================================
+
+// 获取指定pres的pid
+WXDLu32 wxdl_state_pres_get_pid(WXDLthread_resoucre* _pres)
+{
+    if (_pres != NULL)
+    {
+        return  _pres->pid;
+    }
+    return  WXDL_INVALID_PID;
+}
+
+// 获取指定pres的根表
+WXDLhash* wxdl_state_pres_get_root(WXDLthread_resoucre* _pres)
+{
+    if (_pres != NULL)
+    {
+        return  _pres->root;
+    }
+    return  NULL;
+}
+
+// 获取指定pres的当前调用者
+WXDLcall* wxdl_state_pres_get_caller(WXDLthread_resoucre* _pres)
+{
+    if (_pres != NULL)
+    {
+        return  _pres->caller;
+    }
+    return  NULL;
+}
+
+// 获取当前代码层数
+WXDLu64 wxdl_state_pres_get_inner_layer(WXDLthread_resoucre* _pres)
+{
+    if (_pres != NULL)
+    {
+        return  _pres->inner_layer;
+    }
+    return  0;
+}
+
+// 获取指定寄存器
+WXDLvalue* wxdl_state_pres_get_reg(WXDLthread_resoucre* _pres, WXDLu64 _id)
+{
+    if (_pres != NULL && _id < WXDL_REG_SIZE)
+    {
+        return &_pres->R[_id];
+    }
+    return  NULL;
+}
