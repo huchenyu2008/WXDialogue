@@ -63,41 +63,23 @@ int main()
     wxdl_hash_add_str(vt, "language", "en");
     wxdl_state_add_global(state, "game", vt);
 
-    WXDLchar text[] = u8"{import : @LOAD('./test.wxdl')}";
+    WXDLchar text[] = u8"{import : @STRCMP(1, '1')}";
 
     WXDLchar logbuff[4096] = {0};
     wxdl_state_set_logbuff(state, logbuff, sizeof(logbuff));
     WXDLhash* h = NULL;
     WXDLblock* data = NULL;
     WXDLchar* t;
-    for (int i = 0; i < 1000; i++)
-    {
         t = wxdl_new_str(text);
         WXDLu32 pid = wxdl_state_new_pid(state);
         wxdl_state_clear_logbuff(state);
         data = wxdl_parse_block(state, t, sizeof(text), WXDL_TRUE, "code", pid, wxdl_state_logbuff(state));
         wxdl_state_free_pid(state, pid);
 
-        memset(t, 0, sizeof(text));
-        wxdl_free(t);
-        wxdl_free_block(data);
-        wxdl_free_hash(h);
-    }
+        h = wxdl_block_data(data);
     printf("end\n");
     printf("%s\n", logbuff);
 
-    printf("out all string buff\n");
-    WXDLiterator* ite = wxdl_hash_ite(builder->hash);
-    do {
-        WXDLvalue* v = wxdl_iterator_get(ite);
-        if (v != NULL)
-        {
-            WXDLstring* k = wxdl_hash_ite_key(ite);
-
-            printf("\tstr : %s\n", k->str);
-        }
-
-    }while (wxdl_iterator_next(ite));
 
     if (data == NULL) return 1;
 

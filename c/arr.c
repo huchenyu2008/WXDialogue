@@ -106,11 +106,11 @@ WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLstate* _state, WXDLthre
             }
             else if (WXDL_V_TYPE(*v) == WXDL_TYPE_DIC)
             {
-                wxdl_hash_copy_running(WXDL_V_DIC(*nv), _state, _pres);
+                WXDL_V_SET_DIC(*nv, wxdl_hash_copy_running(WXDL_V_DIC(*v), _state, _pres));
             }
             else if (WXDL_V_TYPE(*v) == WXDL_TYPE_ARR)
             {
-                wxdl_arr_copy_running(WXDL_V_ARR(*nv), _state, _pres);
+                WXDL_V_SET_ARR(*nv, wxdl_arr_copy_running(WXDL_V_ARR(*v), _state, _pres));
             }
             else
             {
@@ -118,7 +118,7 @@ WXDLarr* wxdl_arr_copy_running(WXDLarr* _arr, struct WXDLstate* _state, WXDLthre
             }
 		}
 		else
-		    wxdl_value_shallow_copy(nv, v);
+		    wxdl_value_copy(nv, v);
 	}
 
 	wxdl_arr_unlock(_arr);

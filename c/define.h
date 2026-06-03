@@ -258,7 +258,7 @@ typedef struct WXDLhash_node
 }WXDLhash_node;
 
 // 调用函数
-typedef WXDLerror (*WXDLfunction)(struct WXDLstate* state, struct WXDLcall* call, struct WXDLvalue* args, WXDLu32 arg_count, struct WXDLvalue* ret, WXDLthread_resoucre* _pres);
+typedef WXDLerror (*WXDLfunction)(struct WXDLstate* state, struct WXDLcall* call, struct WXDLvalue* args, WXDLu32 arg_count, struct WXDLvalue* ret, WXDLthread_resoucre* pres);
 
 // 函数调用信息
 typedef struct WXDLcall

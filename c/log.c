@@ -10,6 +10,7 @@
 
 WXDLint _wxdl_get_enter_pos(const WXDLchar* code, WXDLint line, WXDLint line_st)
 {
+    if (code == NULL) return 0;
     WXDLint i;
     for (i = 0; code[line_st + i] != '\0'; i++)
     {
@@ -88,7 +89,7 @@ void wxdl_log_call_error(WXDLstate* state, WXDLcall* call, const WXDLchar* text,
         lb->bufflen += (WXDLu64)snprintf(lb->logbuff + lb->bufflen, lb->buffsize - lb->bufflen, "WXDL Call Error file unkown, pos (%d, %d), call '%s' :\n", c->line, c->xpos, c->name->str);
     WXDLthread_resoucre* res = pres;
 
-    if (res != NULL)
+    if (res != NULL && res->text != NULL)
     {
         int off = 0;
         int d = (int)_wxdl_get_enter_pos(res->text, c->line, c->xpos_st);

@@ -90,11 +90,11 @@ WXDLhash* wxdl_hash_copy_running(WXDLhash* _hash, struct WXDLstate* _state, WXDL
 				}
 			    else if (WXDL_V_TYPE(*v) == WXDL_TYPE_DIC)
 			    {
-					wxdl_hash_copy_running(WXDL_NODE_DIC(n), _state, _pres);
+					WXDL_NODE_DIC(n) = wxdl_hash_copy_running(WXDL_V_DIC(*v), _state, _pres);
 				}
 			    else if (WXDL_V_TYPE(*v) == WXDL_TYPE_ARR)
 				{
-				    wxdl_arr_copy_running(WXDL_NODE_ARR(n), _state, _pres);
+				    WXDL_NODE_ARR(n) = wxdl_arr_copy_running(WXDL_V_ARR(*v), _state, _pres);
 				}
 			    else
 			    {

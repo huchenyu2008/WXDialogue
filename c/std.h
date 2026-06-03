@@ -48,7 +48,7 @@
 
 #define WXDL_V_SET_CALL(v, n) ((v).data.c = n, WXDL_V_TYPE(v) = WXDL_TYPE_CALL, WXDL_V_FLAG(v) = 0)
 
-#define WXDL_V_SET_PTR(v, n) ((v).data.c = n, WXDL_V_TYPE(v) = WXDL_TYPE_PTR, WXDL_V_FLAG(v) = 0)
+#define WXDL_V_SET_PTR(v, n) ((v).data.p = n, WXDL_V_TYPE(v) = WXDL_TYPE_PTR, WXDL_V_FLAG(v) = 0)
 
 #define WXDL_V_SET_ARR_REF(v, n) ((v).data.a = n, WXDL_V_TYPE(v) = WXDL_TYPE_ARR, WXDL_V_FLAG(v) = 1)
 
