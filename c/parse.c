@@ -87,7 +87,7 @@ WXDLbool _wxdl_is_little(const WXDLchar* _text)
 WXDLbool _wxdl_is_scope(const WXDLchar* _text)
 {
     unsigned char c = _text[0];
-    if (c == ' ' || c == '\n' || c == '\t')
+    if (c == ' ' || c == '\n' || c == '\t' || c == '\r')
         return WXDL_TRUE;
     else
         return WXDL_FALSE;
@@ -180,7 +180,7 @@ void _wxdl_text_jump_space(const WXDLchar* _text, WXDLu64 _len, WXDLu64* _off, W
     for (; _text[*_off] != 0;)
     {
         WXDLchar c = _text[*_off];
-        if (c == ' ' || c == '\n' || c == '\t')
+        if (c == ' ' || c == '\n' || c == '\t' || c == '\r')
         {
             _wxdl_text_next(_text, _len, _off, _nextline, _line_start);
         }
