@@ -133,7 +133,7 @@ WXDLu64 _wxdl_is_enter(const WXDLchar* _text)
 // 是否结束
 WXDLbool _wxdl_loader_eof(WXDLloader* loader)
 {
-    if (loader->ptr > loader->text_size || loader->text[loader->ptr] == '\0') return WXDL_TRUE;
+    if (loader->ptr >= loader->text_size || loader->text[loader->ptr] == '\0') return WXDL_TRUE;
     else return WXDL_FALSE;
 }
 
