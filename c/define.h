@@ -177,6 +177,11 @@ typedef struct WXDLthread_resoucre WXDLthread_resoucre;
 // 每个文本节点
 typedef struct WXDLtext_node
 {
+    // 用于支持编辑器辅助
+    unsigned int line;
+    unsigned int xpos;
+    unsigned int offset;
+
 	// 节点类型
 	WXDLflag type;
 		// 文本

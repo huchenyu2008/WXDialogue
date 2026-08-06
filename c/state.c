@@ -223,6 +223,12 @@ WXDLhash_node* wxdl_state_add_global(WXDLstate* _state, const WXDLchar* _name, W
 	}
 }
 
+void wxdl_state_remove_global(WXDLstate* _state, const WXDLchar* _name)
+{
+    if (_state == NULL || _name == NULL) return ;
+    wxdl_hash_delete(_state->global, _name);
+}
+
 WXDLtext_node* wxdl_state_get_head(WXDLstate* _state)
 {
 	if (_state == NULL)
@@ -247,6 +253,12 @@ WXDLhash* wxdl_state_add_sign(WXDLstate* _state, const WXDLchar* _sign, WXDLhash
 	}
 
 	return _table;
+}
+
+void wxdl_state_remove_sign(WXDLstate* _state, const WXDLchar* _sign)
+{
+    if (_state == NULL || _sign == NULL) return;
+    wxdl_hash_delete(_state->signs, _sign);
 }
 
 WXDLhash* wxdl_state_get_local_signs_table(WXDLstate* _state)
@@ -277,6 +289,12 @@ WXDLhash* wxdl_state_add_local_sign(WXDLstate* _state, const WXDLchar* _sign, WX
 	}
 
 	return _table;
+}
+
+void wxdl_state_remove_local_sign(WXDLstate* _state, const WXDLchar* _name)
+{
+    if (_state == NULL || _name == NULL) return;
+    wxdl_hash_delete(_state->local_signs, _name);
 }
 
 WXDLhash* wxdl_state_get_sign(WXDLstate* _state, const WXDLchar* _sign)
@@ -318,6 +336,12 @@ WXDLhash_node* wxdl_state_add_func(WXDLstate* _state, const WXDLchar* _name, WXD
 	if (!_is_change_param)
 	    n->v.flag |= WXDL_FLAG_FUNC_NOT_SET_PARAM;
 	return n;
+}
+
+void wxdl_state_remove_func(WXDLstate* _state, const WXDLchar* _name)
+{
+    if (_state == NULL || _name == NULL) return;
+    wxdl_hash_delete(_state->funcs, _name);
 }
 
 WXDLfunction_info wxdl_state_get_func(WXDLstate* _state, const WXDLchar* _name)

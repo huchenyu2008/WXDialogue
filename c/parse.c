@@ -1165,9 +1165,14 @@ WXDLerror _wxdl_parse_data(WXDLloader* _loader, WXDLvalue* _v, WXDLhash_node* _c
         {
             return 1;
         }
+
+    }
+    else
+    {
+        err = 1;
     }
 
-    return 0;
+    return err;
 }
 
 // 解析标签块
@@ -1235,7 +1240,7 @@ WXDLerror _wxdl_parse_block(WXDLloader* loader, WXDLtext* text, WXDLhash* dic, W
             }
             else
             {
-
+                WXDL_LOG_WRITE(loader, loader->where->str, "Key must be followed by ':'");
                 return 1;
             }
 
@@ -1278,8 +1283,14 @@ WXDLerror _wxdl_parse_block(WXDLloader* loader, WXDLtext* text, WXDLhash* dic, W
         {
             // 生成节点
             WXDLtext_node* tnode = (WXDLtext_node*)wxdl_malloc(sizeof(WXDLtext_node));
+            tnode->offset = (unsigned int)loader->ptr;
+            tnode->line = (unsigned int)loader->line;
+            tnode->xpos = (unsigned int)(loader->ptr - loader->line_start);
             tnode->type = WXDL_TEXT_NODE_SIGN;
-            tnode->text = wxdl_new_str(sign_name);
+            if (sign_name != NULL)
+                tnode->text = wxdl_new_str(sign_name);
+            else
+                tnode->text = wxdl_new_str("");
             tnode->data = dic;
             tnode->use_local_tables = use_local_name;
 
@@ -1312,6 +1323,9 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
                 WXDLu64 text_len = textsize;
                 WXDLtext_node* n = (WXDLtext_node*)wxdl_malloc(sizeof(WXDLtext_node));
                 wxdl_set(n, 0, sizeof(*n));
+                n->offset = (unsigned int)loader->ptr;
+                n->line = (unsigned int)loader->line;
+                n->xpos = (unsigned int)(loader->ptr - loader->line_start);
                 n->type = WXDL_TEXT_NODE_TEXT;
                 n->data = NULL;
                 n->text = wxdl_malloc(sizeof(WXDLchar) * text_len + 1);
@@ -1347,13 +1361,16 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
                 _wxdl_loader_next(loader);
                 _wxdl_jump_space(loader);
             }
-
-            err = _wxdl_parse_name_and_id(loader, loader->text[loader->ptr], &sign, NULL);
-            if (err)
+            // 空名称的支持
+            else if (loader->text[loader->ptr] != '{')
             {
-                WXDL_LOG_WRITE(loader, loader->where->str, "Invalid global signature table name");
-                wxdl_free_text(text);
-                return NULL;
+                err = _wxdl_parse_name_and_id(loader, loader->text[loader->ptr], &sign, NULL);
+                if (err)
+                {
+                    WXDL_LOG_WRITE(loader, loader->where->str, "Invalid global signature table name");
+                    wxdl_free_text(text);
+                    return NULL;
+                }
             }
 
             // 检查格式
@@ -1407,6 +1424,7 @@ WXDLtext* _wxdl_parse(WXDLloader* loader)
                 _wxdl_loader_next(loader);
                 loader->psign = wxdl_state_get_sign(loader->state ,sign);
 
+                if (loader->psign == NULL) sign_check = WXDL_FALSE;
 
                 // 加载变量
                 WXDLhash* dic = wxdl_new_hash(16, loader->builder);
@@ -1519,7 +1537,6 @@ WXDLtext* wxdl_parse(WXDLstate* _state, WXDLchar* _text, WXDLu64 _text_size, con
         loader.pres->text_size = _text_size;
         loader.pres->root = NULL;
     }
-
     WXDLtext* t = _wxdl_parse(&loader);
 
     if (loader.pres != NULL)

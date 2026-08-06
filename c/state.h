@@ -45,8 +45,14 @@ WXDIALOGUE_API WXDLbool wxdl_state_pid_vaild(WXDLstate* _state, WXDLu32 _pid);
 // 部分关键词名称不可使用 如 : false, true, null等
 WXDIALOGUE_API WXDLhash_node* wxdl_state_add_global(WXDLstate* _state, const WXDLchar* _name, WXDLhash* _hash);
 
+// 移除一个全局变量集
+WXDIALOGUE_API void wxdl_state_remove_global(WXDLstate* _state, const WXDLchar* _name);
+
 // 添加全局签名表
 WXDIALOGUE_API WXDLhash* wxdl_state_add_sign(WXDLstate* _state, const WXDLchar* _sign, WXDLhash* _table);
+
+// 移除全局签名表
+WXDIALOGUE_API void wxdl_state_remove_sign(WXDLstate* _state, const WXDLchar* _sign);
 
 // 获取独立标签表的表
 WXDIALOGUE_API WXDLhash* wxdl_state_get_local_signs_table(WXDLstate* _state);
@@ -61,6 +67,9 @@ WXDIALOGUE_API WXDLhash* wxdl_state_get_sign(WXDLstate* _state, const WXDLchar* 
 // 查找是顺序下去的
 WXDIALOGUE_API WXDLhash* wxdl_state_add_local_sign(WXDLstate* _state, const WXDLchar* _name, WXDLhash* _table);
 
+// 移除独立签名表
+WXDIALOGUE_API void wxdl_state_remove_local_sign(WXDLstate* _state, const WXDLchar* _name);
+
 // 获取指定名称独立标签表
 WXDIALOGUE_API WXDLhash* wxdl_state_get_local_sign(WXDLstate* _state, const WXDLchar* _name);
 
@@ -68,6 +77,8 @@ WXDIALOGUE_API WXDLhash* wxdl_state_get_local_sign(WXDLstate* _state, const WXDL
 WXDIALOGUE_API WXDLhash* wxdl_state_get_global(WXDLstate* _state);
 
 WXDIALOGUE_API WXDLhash_node* wxdl_state_add_func(WXDLstate* _state, const WXDLchar* _name, WXDLfunction func, WXDLbool _is_change_param);
+
+WXDIALOGUE_API void wxdl_state_remove_func(WXDLstate* _state, const WXDLchar* _name);
 
 WXDIALOGUE_API WXDLfunction_info wxdl_state_get_func(WXDLstate* _state, const WXDLchar* _name);
 

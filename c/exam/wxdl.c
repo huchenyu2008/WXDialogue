@@ -62,35 +62,21 @@ int main()
     WXDLhash* vt2 = wxdl_new_hash(16, builder);
     wxdl_hash_add_str(vt, "language", "en");
     wxdl_state_add_global(state, "game", vt);
-
-    WXDLchar text[] = u8"{import : @STRCMP(1, '1')}";
-
+    ;
+    WXDLchar text[] = u8"abc $ {info.text : 'false'}";
     WXDLchar logbuff[4096] = {0};
     wxdl_state_set_logbuff(state, logbuff, sizeof(logbuff));
     WXDLhash* h = NULL;
-    WXDLblock* data = NULL;
+    WXDLtext* data = NULL;
     WXDLchar* t;
         t = wxdl_new_str(text);
         WXDLu32 pid = wxdl_state_new_pid(state);
         wxdl_state_clear_logbuff(state);
-        data = wxdl_parse_block(state, t, sizeof(text), WXDL_TRUE, "code", pid, wxdl_state_logbuff(state));
+        data = wxdl_parse(state, t, sizeof(text), "code", pid, wxdl_state_logbuff(state));
         wxdl_state_free_pid(state, pid);
 
-        h = wxdl_block_data(data);
     printf("end\n");
-    printf("%s\n", logbuff);
-
-
-    if (data == NULL) return 1;
-
-    WXDLblock* b2 = wxdl_new_block(h, builder);
-
-    WXDLbuff_set* bs = wxdl_new_buff_set();
-    WXDLsaver* saver = wxdl_new_saver(b2, NULL);
-
-    wxdl_saver_output(saver, bs);
-
-    printf("%s\n", wxdl_buff_get(wxdl_buff_set_at(bs, 0)));
+    printf(" %p %s\n", data, logbuff);
 
 	// printf("start running\n");
 	// WXDLstring_builder* sb = wxdl_new_builder();
